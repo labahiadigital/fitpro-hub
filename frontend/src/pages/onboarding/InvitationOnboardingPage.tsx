@@ -570,8 +570,8 @@ export function InvitationOnboardingPage() {
     validate: (values) => {
       const emailPrefilled = !!invitationData?.email;
       return {
-        firstName: values.firstName.trim().length < 2 ? "Nombre requerido" : null,
-        lastName: values.lastName.trim().length < 2 ? "Apellido requerido" : null,
+        firstName: values.firstName.trim().length < 2 ? t("invitationOnboardingPage.nombreRequerido") : null,
+        lastName: values.lastName.trim().length < 2 ? t("invitationOnboardingPage.apellidoRequerido") : null,
         email: /^\S+@\S+\.\S+$/.test(values.email) ? null : t("auth.invalidEmail"),
         confirmEmail: emailPrefilled
           ? null
@@ -840,7 +840,7 @@ export function InvitationOnboardingPage() {
               )
             }
           >
-            {systemFormSubmissionId ? "Rellenar cuestionario" : "Ir a mis formularios"}
+            {systemFormSubmissionId ? t("invitationOnboardingPage.rellenarCuestionario") : t("invitationOnboardingPage.irAMisFormularios")}
           </Button>
         </Paper>
       </Container>
@@ -936,7 +936,7 @@ export function InvitationOnboardingPage() {
                     )}
                   </Group>
                   <Text c="dimmed" size="sm" ta="center" mt="xs">
-                    {product.product_type === "subscription" ? t("invitationOnboardingPage.suscripciónRecurrente") : "Pago único"}
+                    {product.product_type === "subscription" ? t("invitationOnboardingPage.suscripciónRecurrente") : t("invitationOnboardingPage.pagoUnico")}
                   </Text>
                 </Paper>
               </Stack>

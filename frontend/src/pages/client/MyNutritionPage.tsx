@@ -2854,7 +2854,7 @@ export function MyNutritionPage() {
                     <Text size="xs" c="dimmed" lineClamp={1} mt={2}>
                       {hasLogs
                         ? logs.flatMap((l) => l.foods?.map((f) => f.name) || []).join(" • ")
-                        : "Sin registrar"
+                        : t("myNutritionPage.sinRegistrar")
                       }
                     </Text>
                   </Box>
@@ -3276,7 +3276,7 @@ export function MyNutritionPage() {
                                       </Group>
                                     )}
                                   </Group>
-                                  <Text size="xs" c="dimmed">{meal.is_free_meal ? "Comida libre" : `${mealFoods.length} alimentos`}</Text>
+                                  <Text size="xs" c="dimmed">{meal.is_free_meal ? t("myNutritionPage.comidaLibre") : `${mealFoods.length} alimentos`}</Text>
                                 </Box>
                               </Group>
                               <Group gap="xs">
@@ -3626,7 +3626,7 @@ export function MyNutritionPage() {
                                           <Text size="xs" c={loggedEquiv ? undefined : "red"} td={loggedEquiv ? undefined : "line-through"} style={{ flex: 1 }}>
                                             {pf.name} ({pf.quantity}g)
                                           </Text>
-                                          <Text size="xs" c="dimmed">{loggedEquiv ? `→ ${loggedEquiv.name} (${loggedEquiv.quantity || "?"}g)` : "No registrado"}</Text>
+                                          <Text size="xs" c="dimmed">{loggedEquiv ? `→ ${loggedEquiv.name} (${loggedEquiv.quantity || "?"}g)` : t("myNutritionPage.noRegistrado")}</Text>
                                         </Group>
                                       );
                                     })}

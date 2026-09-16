@@ -1696,7 +1696,7 @@ export function MyWorkoutsPage() {
         );
         return { day: dayName, dayName, dayNum, type: `${fallbackBlocks.reduce((sum, b) => sum + (b.exercises?.length || 0), 0)} ejercicios`, completed: false, isRestDay: false, blocks: fallbackBlocks, exercises_list: exercises };
       }
-      return { day: dayName, dayName, dayNum, type: "Sin asignar", completed: false, isRestDay: true, blocks: [] as ProgramDay["blocks"], exercises_list: [] as Array<{ name: string; sets: number; reps: string }> };
+      return { day: dayName, dayName, dayNum, type: t("myWorkoutsPage.sinAsignar"), completed: false, isRestDay: true, blocks: [] as ProgramDay["blocks"], exercises_list: [] as Array<{ name: string; sets: number; reps: string }> };
     });
   };
 
@@ -1734,7 +1734,7 @@ export function MyWorkoutsPage() {
     history: history?.map(h => {
       const d = new Date(h.created_at);
       return {
-        date: !isNaN(d.getTime()) ? d.toLocaleDateString('es-ES') : "Sin fecha",
+        date: !isNaN(d.getTime()) ? d.toLocaleDateString('es-ES') : t("myWorkoutsPage.sinFecha"),
         name: (h.log as Record<string, unknown>)?.workout_name as string || "Entrenamiento",
         duration: `${(h.log as Record<string, unknown>)?.duration_minutes || 60} min`,
         calories: (h.log as Record<string, unknown>)?.calories_burned as number || 0,
@@ -2388,7 +2388,7 @@ export function MyWorkoutsPage() {
                       }
                       summary={
                         <Text size="xs" c="dimmed">
-                          {!inRange ? "Sin programa" : day.isRestDay ? "Descanso" : `${day.type} - ${exCount} ejercicios`}
+                          {!inRange ? t("myWorkoutsPage.sinPrograma") : day.isRestDay ? "Descanso" : `${day.type} - ${exCount} ejercicios`}
                         </Text>
                       }
                     />

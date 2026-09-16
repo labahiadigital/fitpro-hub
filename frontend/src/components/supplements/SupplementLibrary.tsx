@@ -155,7 +155,7 @@ export function SupplementLibrary() {
       warnings: "",
     },
     validate: {
-      name: (v) => (v.length < 2 ? "Nombre requerido" : null),
+      name: (v) => (v.length < 2 ? t("supplementLibrary.nombreRequerido") : null),
     },
   });
 
@@ -264,7 +264,7 @@ export function SupplementLibrary() {
               </Group>
 
               <Text c="dimmed" size="sm" lineClamp={2} mb="md">
-                {supplement.description || "Sin descripción"}
+                {supplement.description || t("supplementLibrary.sinDescripcion")}
               </Text>
 
               {(supplement.calories != null || supplement.protein != null) && (

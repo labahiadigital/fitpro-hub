@@ -465,7 +465,7 @@ export function ChatPage() {
 
   const clientOptions = (clientsData?.items || []).map((c: { id: string; first_name?: string; last_name?: string }) => ({
     value: c.id,
-    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre",
+    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || t("chatPage.sinNombre"),
   }));
 
   const filteredConversations = conversations.filter((c) =>

@@ -218,7 +218,7 @@ export function BillingPage() {
       client_name: (v) => (!v ? "Nombre del cliente requerido" : null),
       items: {
         description: (v) => (!v ? t("billingPage.descripciónRequerida") : null),
-        unit_price: (v) => (v <= 0 ? "Precio requerido" : null),
+        unit_price: (v) => (v <= 0 ? t("billingPage.precioRequerido") : null),
       },
     },
   });
@@ -381,7 +381,7 @@ export function BillingPage() {
     openConfirm({
       title: t("billing.marcarComoPagada"),
       message: `¿Marcar como pagada la factura ${inv.invoice_number} (${formatDecimal(Number(inv.total), 2)} €)?`,
-      confirmLabel: "Marcar pagada",
+      confirmLabel: t("billingPage.marcarPagada"),
       color: "green",
       onConfirm: async () => { try { await markInvoicePaid.mutateAsync({ id: inv.id }); } catch { /* handled */ } },
     });
@@ -403,7 +403,7 @@ export function BillingPage() {
     openConfirm({
       title: t("billing.facturaRectificativa"),
       message: `¿Crear una factura rectificativa para ${inv.invoice_number}?`,
-      confirmLabel: "Crear rectificativa",
+      confirmLabel: t("billingPage.crearRectificativa"),
       color: "orange",
       onConfirm: async () => { try { await createRectificative.mutateAsync(inv.id); } catch { /* handled */ } },
     });
@@ -530,7 +530,7 @@ export function BillingPage() {
     openConfirm({
       title: t("billing.marcarComoPagado"),
       message: `¿Marcar el cobro de €${formatDecimal(Number(payment.amount), 2)} como pagado?`,
-      confirmLabel: "Marcar pagado",
+      confirmLabel: t("billingPage.marcarPagado"),
       color: "green",
       onConfirm: async () => { try { await markPaymentPaid.mutateAsync(payment.id); } catch { /* handled */ } },
     });
@@ -637,7 +637,7 @@ export function BillingPage() {
         client_id: values.client_id || undefined,
         product_id: values.product_id || undefined,
         amount,
-        description: values.description || selectedProduct?.name || "Cobro manual",
+        description: values.description || selectedProduct?.name || t("billingPage.cobroManual"),
         payment_type: selectedProduct?.type || "one_time",
       });
       closeChargeModal();
@@ -673,7 +673,7 @@ export function BillingPage() {
   };
 
   const auditActionLabel = (a: string) => {
-    const map: Record<string, string> = { created: "Creada", updated: "Editada", finalized: "Emitida", sent: "Enviada", paid: "Pagada", cancelled: "Anulada", rectified: "Rectificada", email_sent: "Email enviado", pdf_generated: "PDF generado" };
+    const map: Record<string, string> = { created: "Creada", updated: "Editada", finalized: "Emitida", sent: "Enviada", paid: "Pagada", cancelled: "Anulada", rectified: "Rectificada", email_sent: t("billingPage.emailEnviado"), pdf_generated: "PDF generado" };
     return map[a] || a;
   };
 
@@ -917,7 +917,7 @@ export function BillingPage() {
                         sections={total > 0 ? [
                           { value: subPct, color: "var(--nv-primary)", tooltip: `Suscripciones: ${subPct}%` },
                           { value: otherPct, color: "var(--nv-success)", tooltip: `Otros: ${otherPct}%` },
-                        ] : [{ value: 100, color: "var(--nv-border)", tooltip: "Sin datos" }]}
+                        ] : [{ value: 100, color: "var(--nv-border)", tooltip: t("billingPage.sinDatos") }]}
                         size={180}
                         thickness={20}
                       />
@@ -1948,7 +1948,7 @@ export function BillingPage() {
 
                         <Divider label={t("billing.sistemaInformaticoObligatorioAeat")} labelPosition="left" variant="dashed" />
                         <Group grow>
-                          <TextInput label={t("billing.razonSocialDesarrollador")} placeholder={settingsForm.values.business_name || "Tu empresa"} {...settingsForm.getInputProps("software_company_name")} />
+                          <TextInput label={t("billing.razonSocialDesarrollador")} placeholder={settingsForm.values.business_name || t("billingPage.tuEmpresa")} {...settingsForm.getInputProps("software_company_name")} />
                           <TextInput label={t("billing.nifDesarrollador")} placeholder={settingsForm.values.tax_id || "B12345678"} {...settingsForm.getInputProps("software_company_nif")} />
                         </Group>
                         <Group grow>

@@ -419,8 +419,8 @@ export function ClientOnboardingPage() {
         const phoneOk = /^[+]?[\d\s().-]{6,}$/.test(values.phone || "");
         const isCompany = values.fiscalType === "company";
         return {
-          firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
-          lastName: values.lastName.length < 2 ? "Apellido requerido" : null,
+          firstName: values.firstName.length < 2 ? t("clientOnboardingPage.nombreRequerido") : null,
+          lastName: values.lastName.length < 2 ? t("clientOnboardingPage.apellidoRequerido") : null,
           email: /^\S+@\S+$/.test(values.email) ? null : t("auth.invalidEmail"),
           confirmEmail:
             values.confirmEmail !== values.email
@@ -460,8 +460,8 @@ export function ClientOnboardingPage() {
       }
       if (active === 0) {
         return {
-          firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
-          lastName: values.lastName.length < 2 ? "Apellido requerido" : null,
+          firstName: values.firstName.length < 2 ? t("clientOnboardingPage.nombreRequerido") : null,
+          lastName: values.lastName.length < 2 ? t("clientOnboardingPage.apellidoRequerido") : null,
           email: /^\S+@\S+$/.test(values.email) ? null : t("auth.invalidEmail"),
           confirmEmail:
             values.confirmEmail !== values.email
@@ -765,7 +765,7 @@ export function ClientOnboardingPage() {
               icon={<IconAlertCircle size={16} />}
               color={soldOutState.action === "waitlist" ? "yellow" : "red"}
               mb="md"
-              title={soldOutState.action === "waitlist" ? "Plazas agotadas" : "Producto agotado"}
+              title={soldOutState.action === "waitlist" ? t("clientOnboardingPage.plazasAgotadas") : t("clientOnboardingPage.productoAgotado")}
             >
               {soldOutState.action === "waitlist"
                 ? t("clientOnboardingPage.esteProductoEstáCompletoApúntateA")
@@ -1442,7 +1442,7 @@ export function ClientOnboardingPage() {
                   >
                     {(props) => (
                       <Button {...props} variant="light" leftSection={<IconPhoto size={16} />} radius="xl" size="xs">
-                        {progressPhoto ? "Cambiar foto" : "Subir foto"}
+                        {progressPhoto ? t("clientOnboardingPage.cambiarFoto") : t("clientOnboardingPage.subirFoto")}
                       </Button>
                     )}
                   </FileButton>

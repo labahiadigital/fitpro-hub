@@ -176,7 +176,7 @@ export function ClientDashboardPage() {
       carbs: { current: 0, target: 250 },
       fats: { current: 0, target: 70 },
     },
-    goals: dashboardData?.goals || { primary: "Sin objetivo", progress: 0, start_weight: 0, current_weight: 0, target_weight: 0 },
+    goals: dashboardData?.goals || { primary: t("clientDashboardPage.sinObjetivo"), progress: 0, start_weight: 0, current_weight: 0, target_weight: 0 },
     recentActivity: dashboardData?.recent_activity || [],
     upcomingSessions: dashboardData?.upcoming_sessions || [],
   };

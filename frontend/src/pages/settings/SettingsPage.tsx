@@ -715,7 +715,7 @@ export function SettingsPage() {
     validate: {
       current_password: (v) => (!v ? "Requerida" : null),
       new_password: passwordValidator,
-      confirm_password: (v, values) => v !== values.new_password ? "No coinciden" : null,
+      confirm_password: (v, values) => v !== values.new_password ? t("settingsPage.noCoinciden") : null,
     },
   });
 

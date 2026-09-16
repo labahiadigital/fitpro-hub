@@ -205,7 +205,7 @@ export function CalendarPage() {
 
   const bookings: Booking[] = (bookingsData || []).map((b: Booking) => ({
     ...b,
-    client_name: b.client_name || (b.client_id ? clientsMap.get(b.client_id) : undefined) || "Sin cliente",
+    client_name: b.client_name || (b.client_id ? clientsMap.get(b.client_id) : undefined) || t("calendarPage.sinCliente"),
   })).filter((b: Booking) => !filterMemberId || (b as unknown as Record<string, unknown>).organizer_id === filterMemberId);
   
   // Combinar bookings con eventos de Google Calendar
@@ -1686,7 +1686,7 @@ export function CalendarPage() {
               <Box>
                 <Text c="dimmed" size="xs">{t("calendar.cliente")}</Text>
                 <Text fw={500} size="sm">
-                  {selectedBooking.client_name || "No especificado"}
+                  {selectedBooking.client_name || t("calendarPage.noEspecificado")}
                 </Text>
               </Box>
             </Group>
@@ -1722,7 +1722,7 @@ export function CalendarPage() {
                 <Text fw={500} size="sm">
                   {selectedBooking.location?.address ||
                     selectedBooking.location?.online_link ||
-                    "No especificada"}
+                    t("calendarPage.noEspecificada")}
                 </Text>
               </Box>
             </Group>

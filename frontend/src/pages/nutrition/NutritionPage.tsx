@@ -180,7 +180,7 @@ function FoodGroupsPanel() {
 
   const fgForm = useForm({
     initialValues: { name: "", subcategory: "", quantity: "", calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 },
-    validate: { name: (v) => (v.length < 2 ? "Nombre requerido" : null) },
+    validate: { name: (v) => (v.length < 2 ? t("nutritionPage.nombreRequerido") : null) },
   });
 
   const handleSaveFg = async (values: typeof fgForm.values) => {
@@ -324,14 +324,14 @@ export function NutritionPage() {
   const clientsMap = useMemo(() => {
     const map = new Map<string, string>();
     (clientsData?.items || []).forEach((c: { id: string; first_name?: string; last_name?: string }) => {
-      map.set(c.id, `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre");
+      map.set(c.id, `${c.first_name || ""} ${c.last_name || ""}`.trim() || t("nutritionPage.sinNombre"));
     });
     return map;
   }, [clientsData]);
 
   const clientOptions = (clientsData?.items || []).map((c: { id: string; first_name?: string; last_name?: string }) => ({
     value: c.id,
-    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre",
+    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || t("nutritionPage.sinNombre"),
   }));
 
   const goBack = useCallback(() => {
@@ -502,7 +502,7 @@ export function NutritionPage() {
   const foods: Food[] = useMemo(() => {
     if (!supabaseFoods) return [];
     return supabaseFoods.map((food: any) => ({
-      id: food.id, name: food.name || "Sin nombre", calories: food.calories || 0,
+      id: food.id, name: food.name || t("nutritionPage.sinNombre"), calories: food.calories || 0,
       protein: food.protein_g || 0, carbs: food.carbs_g || 0, fat: food.fat_g || 0,
       serving_size: "100", category: mapCategory(food.category),
     }));
@@ -620,7 +620,7 @@ export function NutritionPage() {
 
   const foodForm = useForm({
     initialValues: { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, serving_size: "100g", category: "" },
-    validate: { name: (value) => (value.length < 2 ? "Nombre requerido" : null) },
+    validate: { name: (value) => (value.length < 2 ? t("nutritionPage.nombreRequerido") : null) },
   });
 
   const planForm = useForm({
@@ -630,7 +630,7 @@ export function NutritionPage() {
       dietary_tags: [] as string[], client_id: null as string | null, start_date: "", end_date: "",
       review_interval_days: null as number | null,
     },
-    validate: { name: (value) => (value.length < 2 ? "Nombre requerido" : null) },
+    validate: { name: (value) => (value.length < 2 ? t("nutritionPage.nombreRequerido") : null) },
   });
 
   const handleTargetMacrosChange = useCallback((t: { protein: number; carbs: number; fat: number }) => {
@@ -850,7 +850,7 @@ export function NutritionPage() {
     // El filtro 'system'/'custom' se aplica server-side (ver foodSourceParam), por
     // lo que aquí no volvemos a filtrar por origen y la paginación cuadra.
     let foodsList = paginatedFoods.items.map((food: any) => ({
-      id: food.id, name: food.name || "Sin nombre", calories: food.calories || 0,
+      id: food.id, name: food.name || t("nutritionPage.sinNombre"), calories: food.calories || 0,
       protein: food.protein_g || 0, carbs: food.carbs_g || 0, fat: food.fat_g || 0,
       serving_size: "100", category: mapCategory(food.category), is_global: food.is_global ?? false,
       image_url: food.image_url || null,

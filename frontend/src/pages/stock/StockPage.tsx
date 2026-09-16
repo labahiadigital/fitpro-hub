@@ -643,7 +643,7 @@ export function StockPage() {
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeItemModal}>{t("stock.cancelar")}</Button>
               <Button type="submit" loading={createItem.isPending || updateItem.isPending}>
-                {editMode ? "Guardar cambios" : "Crear Elemento"}
+                {editMode ? t("stockPage.guardarCambios") : t("stockPage.crearElemento")}
               </Button>
             </Group>
           </Stack>

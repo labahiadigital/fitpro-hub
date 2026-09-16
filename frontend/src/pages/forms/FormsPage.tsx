@@ -220,7 +220,7 @@ export function FormsPage() {
       id: s.id,
       form_id: s.form_id,
       client_id: s.client_id,
-      client: s.client_name || "Cliente desconocido",
+      client: s.client_name || t("formsPage.clienteDesconocido"),
       form: s.form_name || "Formulario",
       status: s.status,
       date: (s.submitted_at || s.created_at || "").split("T")[0],
@@ -335,7 +335,7 @@ export function FormsPage() {
       product_ids: [] as string[],
     },
     validate: {
-      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
+      name: (value) => (value.length < 2 ? t("formsPage.nombreRequerido") : null),
     },
   });
 
@@ -729,7 +729,7 @@ export function FormsPage() {
           {formTemplate.name}
         </Text>
         <Text c="dimmed" lineClamp={2} mb="md" size="sm">
-          {formTemplate.description || "Sin descripción"}
+          {formTemplate.description || t("formsPage.sinDescripcion")}
         </Text>
 
         <Group gap="xs" mb="md">
@@ -1629,7 +1629,7 @@ export function FormsPage() {
         opened={sendOpened}
         position="right"
         size="md"
-        title={sendingForm ? `Enviar: ${sendingForm.name}` : "Enviar formulario"}
+        title={sendingForm ? `Enviar: ${sendingForm.name}` : t("formsPage.enviarFormulario")}
       >
         <Stack>
           <Text c="dimmed" size="sm">

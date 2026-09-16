@@ -1041,8 +1041,8 @@ export function ClientsPage() {
       goals: "",
     },
     validate: {
-      first_name: (value) => (value.length < 2 ? "Nombre requerido" : null),
-      last_name: (value) => (value.length < 2 ? "Apellido requerido" : null),
+      first_name: (value) => (value.length < 2 ? t("clientsPage.nombreRequerido") : null),
+      last_name: (value) => (value.length < 2 ? t("clientsPage.apellidoRequerido") : null),
       email: (value) => (/^\S+@\S+$/.test(value) ? null : t("auth.invalidEmail")),
     },
   });
@@ -1066,7 +1066,7 @@ export function ClientsPage() {
       color: "#5C80BC",
     },
     validate: {
-      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
+      name: (value) => (value.length < 2 ? t("clientsPage.nombreRequerido") : null),
     },
   });
 
@@ -1079,8 +1079,8 @@ export function ClientsPage() {
       goals: "",
     },
     validate: {
-      first_name: (value) => (value.length < 2 ? "Nombre requerido" : null),
-      last_name: (value) => (value.length < 2 ? "Apellido requerido" : null),
+      first_name: (value) => (value.length < 2 ? t("clientsPage.nombreRequerido") : null),
+      last_name: (value) => (value.length < 2 ? t("clientsPage.apellidoRequerido") : null),
       email: (value) => (/^\S+@\S+$/.test(value) ? null : t("auth.invalidEmail")),
     },
   });
@@ -1803,10 +1803,10 @@ export function ClientsPage() {
             ]}
             getDeleteLabel={(client: any) =>
               client.deleted_at
-                ? "Eliminar definitivamente"
+                ? t("clientsPage.eliminarDefinitivamente")
                 : client.is_active
                 ? "Desasignar"
-                : "Borrar permanentemente"
+                : t("clientsPage.borrarPermanentemente")
             }
             pagination={{
               page,
@@ -2276,7 +2276,7 @@ export function ClientsPage() {
         title={
           clientToDelete?.deleted_at
             ? t("clientsPage.confirmarEliminaciónDefinitiva")
-            : "Mover a Eliminados"
+            : t("clientsPage.moverAEliminados")
         }
         radius="lg"
         size="sm"
@@ -2313,7 +2313,7 @@ export function ClientsPage() {
               onClick={() => handlePermanentDelete(clientToDelete)}
               radius="xl"
             >
-              {clientToDelete?.deleted_at ? "Eliminar definitivamente" : "Mover a Eliminados"}
+              {clientToDelete?.deleted_at ? t("clientsPage.eliminarDefinitivamente") : t("clientsPage.moverAEliminados")}
             </Button>
           </Group>
         </Stack>

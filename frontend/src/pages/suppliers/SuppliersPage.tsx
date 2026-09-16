@@ -181,9 +181,9 @@ export default function SuppliersPage() {
   const form = useForm<FormValues>({
     initialValues: { ...EMPTY_VALUES },
     validate: {
-      legal_name: (v) => (v.trim().length < 2 ? "Nombre obligatorio" : null),
+      legal_name: (v) => (v.trim().length < 2 ? t("suppliersPage.nombreObligatorio") : null),
       email: (v) =>
-        v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "Email inválido" : null,
+        v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? t("suppliersPage.emailInvalido") : null,
       default_discount_pct: (v) =>
         v === "" || v === null
           ? null
@@ -440,7 +440,7 @@ export default function SuppliersPage() {
           closeModal();
           setEditing(null);
         }}
-        title={editing ? `Editar: ${editing.legal_name}` : "Nuevo proveedor"}
+        title={editing ? `Editar: ${editing.legal_name}` : t("suppliersPage.nuevoProveedor")}
         size="xl"
       >
         <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -723,7 +723,7 @@ export default function SuppliersPage() {
                 type="submit"
                 loading={createSupplier.isPending || updateSupplier.isPending}
               >
-                {editing ? "Guardar cambios" : "Crear proveedor"}
+                {editing ? t("suppliersPage.guardarCambios") : t("suppliersPage.crearProveedor")}
               </Button>
             </Group>
           </Stack>

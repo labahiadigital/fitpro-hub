@@ -730,7 +730,7 @@ export function ReportsPage() {
                   sections={kpis.totalClients > 0 ? [
                     { value: (kpis.activeClients / kpis.totalClients) * 100, color: "green", tooltip: `Activos: ${kpis.activeClients}` },
                     { value: ((kpis.totalClients - kpis.activeClients) / kpis.totalClients) * 100, color: "gray", tooltip: `Inactivos: ${kpis.totalClients - kpis.activeClients}` },
-                  ] : [{ value: 100, color: "gray", tooltip: "Sin clientes" }]}
+                  ] : [{ value: 100, color: "gray", tooltip: t("reportsPage.sinClientes") }]}
                   size={160}
                   thickness={16}
                 />

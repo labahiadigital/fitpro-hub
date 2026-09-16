@@ -80,99 +80,31 @@ interface Automation {
   run_count: number;
 }
 
-const triggerTypes = [
-  {
-    value: "client_created",
-    label: "Nuevo cliente creado",
-    icon: IconUser,
-    color: "blue",
-  },
-  {
-    value: "booking_created",
-    label: "Nueva reserva creada",
-    icon: IconCalendarEvent,
-    color: "green",
-  },
-  {
-    value: "booking_reminder",
-    label: "Recordatorio de reserva",
-    icon: IconClockHour4,
-    color: "orange",
-  },
-  {
-    value: "payment_received",
-    label: "Pago recibido",
-    icon: IconCreditCard,
-    color: "teal",
-  },
-  {
-    value: "payment_failed",
-    label: "Pago fallido",
-    icon: IconAlertCircle,
-    color: "red",
-  },
-  {
-    value: "subscription_renewal",
-    label: "Renovación próxima",
-    icon: IconBolt,
-    color: "grape",
-  },
-  {
-    value: "client_inactive",
-    label: "Cliente inactivo",
-    icon: IconClockHour4,
-    color: "yellow",
-  },
-  {
-    value: "form_submitted",
-    label: "Formulario enviado",
-    icon: IconCheck,
-    color: "cyan",
-  },
+const getTriggerTypes = (t: (k: string) => string) => [
+  { value: "client_created", label: t("automations.nuevoClienteCreado"), icon: IconUser, color: "blue" },
+  { value: "booking_created", label: t("automations.nuevaReservaCreada"), icon: IconCalendarEvent, color: "green" },
+  { value: "booking_reminder", label: t("automations.recordatorioDeReserva"), icon: IconClockHour4, color: "orange" },
+  { value: "payment_received", label: t("automations.pagoRecibido"), icon: IconCreditCard, color: "teal" },
+  { value: "payment_failed", label: t("automations.pagoFallido"), icon: IconAlertCircle, color: "red" },
+  { value: "subscription_renewal", label: t("automations.renovacionProxima"), icon: IconBolt, color: "grape" },
+  { value: "client_inactive", label: t("automations.clienteInactivo"), icon: IconClockHour4, color: "yellow" },
+  { value: "form_submitted", label: t("automations.formularioEnviado"), icon: IconCheck, color: "cyan" },
 ];
 
-const actionTypes = [
-  { value: "send_email", label: "Enviar email", icon: IconMail, color: "blue" },
-  {
-    value: "send_notification",
-    label: "Enviar notificación",
-    icon: IconBell,
-    color: "orange",
-  },
-  {
-    value: "send_message",
-    label: "Enviar mensaje",
-    icon: IconMessage,
-    color: "green",
-  },
-  {
-    value: "assign_form",
-    label: "Asignar formulario",
-    icon: IconCheck,
-    color: "teal",
-  },
-  {
-    value: "assign_program",
-    label: "Asignar programa",
-    icon: IconGitBranch,
-    color: "grape",
-  },
-  {
-    value: "create_task",
-    label: "Crear tarea",
-    icon: IconSettings,
-    color: "cyan",
-  },
-  {
-    value: "update_tags",
-    label: "Actualizar etiquetas",
-    icon: IconUser,
-    color: "pink",
-  },
+const getActionTypes = (t: (k: string) => string) => [
+  { value: "send_email", label: t("automations.enviarEmail"), icon: IconMail, color: "blue" },
+  { value: "send_notification", label: t("automations.enviarNotificacion"), icon: IconBell, color: "orange" },
+  { value: "send_message", label: t("automations.enviarMensaje"), icon: IconMessage, color: "green" },
+  { value: "assign_form", label: t("automations.asignarFormulario"), icon: IconCheck, color: "teal" },
+  { value: "assign_program", label: t("automations.asignarPrograma"), icon: IconGitBranch, color: "grape" },
+  { value: "create_task", label: t("automations.crearTarea"), icon: IconSettings, color: "cyan" },
+  { value: "update_tags", label: t("automations.actualizarEtiquetas"), icon: IconUser, color: "pink" },
 ];
 
 export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
   const { t } = useTranslation();
+  const triggerTypes = getTriggerTypes(t);
+  const actionTypes = getActionTypes(t);
   // API hooks
   const { data: automationsData = [] } = useAutomations();
   const createAutomation = useCreateAutomation();
@@ -217,8 +149,8 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
       trigger_config: {} as Record<string, any>,
     },
     validate: {
-      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
-      trigger_type: (value) => (value ? null : "Selecciona un disparador"),
+      name: (value) => (value.length < 2 ? t("common.nombreRequerido") : null),
+      trigger_type: (value) => (value ? null : t("automations.seleccionaUnDisparador")),
     },
   });
 
@@ -491,7 +423,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
           description={t("automations.creaTuPrimeraAutomatizacionPara")}
           icon={<IconRobot size={40} />}
           onAction={() => openAutomationBuilder()}
-          title={"No hay automatizaciones"}
+          title={t("automations.noHayAutomatizaciones")}
         />
       )}
 
@@ -514,7 +446,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
               <Stack mt="md">
                 <TextInput
                   label={t("automations.nombreDeLaAutomatizacion")}
-                  placeholder={"Ej: Onboarding de nuevos clientes"}
+                  placeholder={t("automations.ejOnboarding")}
                   required
                   {...form.getInputProps("name")}
                 />
@@ -668,7 +600,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                                     config: { ...action.config, template: v },
                                   })
                                 }
-                                placeholder={"Selecciona plantilla"}
+                                placeholder={t("automations.seleccionaPlantilla")}
                                 size="xs"
                                 value={action.config.template}
                               />
@@ -684,7 +616,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                                     },
                                   })
                                 }
-                                placeholder={"Escribe el mensaje..."}
+                                placeholder={t("automations.escribeElMensaje")}
                                 size="xs"
                                 value={action.config.message || ""}
                               />

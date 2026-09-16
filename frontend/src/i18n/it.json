@@ -105,7 +105,8 @@
     "copiado": "Copiato!",
     "copiarEnlace": "Copia link pubblico",
     "copiarCodigo": "Copia codice",
-    "cliente": "Cliente"
+    "cliente": "Cliente",
+    "nombreRequerido": "Nome obbligatorio"
   },
   "nav": {
     "mainMenu": "Menu Principale",
@@ -1219,7 +1220,9 @@
     "no_se_pudo_actualizar_el_estado": "Impossibile aggiornare lo stato",
     "automatizacion_eliminada": "Automazione eliminata",
     "la_automatizacion_se_ha_eliminado_correctamente": "L'automazione è stata eliminata correttamente",
-    "no_se_pudo_eliminar_la_automatizacion": "Impossibile eliminare l'automazione"
+    "no_se_pudo_eliminar_la_automatizacion": "Impossibile eliminare l'automazione",
+    "ejOnboarding": "Es.: Onboarding nuovi clienti",
+    "seleccionaUnDisparador": "Seleziona un trigger"
   },
   "boxes": {
     "nombre": "Nome",
@@ -4889,19 +4892,24 @@
     "sáb": "Sab",
     "sesión": "Sessione",
     "modificarSesiónCita": "Modifica Sessione/Appuntamento",
-    "detalleDeSesiónCita": "Dettaglio Sessione/Appuntamento"
+    "detalleDeSesiónCita": "Dettaglio Sessione/Appuntamento",
+    "sinCliente": "Senza cliente",
+    "noEspecificado": "Non specificato",
+    "noEspecificada": "Non specificata"
   },
   "chatPage": {
     "comunícateConTuEntrenador": "Comunica con il tuo allenatore",
     "comunícateConTusClientesYEquipo": "Comunica con i tuoi clienti e il team",
     "whatsAppNoEstáConectadoEnEsteWorks": "WhatsApp non è connesso in questo workspace",
-    "esteClienteNoTieneNúmeroDeTeléfono": "Questo cliente non ha un numero di telefono"
+    "esteClienteNoTieneNúmeroDeTeléfono": "Questo cliente non ha un numero di telefono",
+    "sinNombre": "Senza nome"
   },
   "clientDashboardPage": {
     "género": "genere",
     "ComplétaloCuandoPuedas": " — completalo quando puoi.",
     "tienesUnaRevisiónPendiente": "Hai una revisione in sospeso",
-    "próximaRevisión": "Prossima revisione"
+    "próximaRevisión": "Prossima revisione",
+    "sinObjetivo": "Senza obiettivo"
   },
   "myCalendarPage": {
     "noHaySesionesParaEsteDía": "Nessuna sessione per questo giorno",
@@ -4914,7 +4922,10 @@
   "myNutritionPage": {
     "noSeEncontraronRecetasConEsaBúsque": "Nessuna ricetta trovata con quella ricerca.",
     "tuEntrenadorAúnNoHaCompartidoRecet": "Il tuo allenatore non ha ancora condiviso ricette con te.",
-    "seleccionaUnDíaParaVerElDetalleNu": "Seleziona un giorno per vedere il dettaglio nutrizionale"
+    "seleccionaUnDíaParaVerElDetalleNu": "Seleziona un giorno per vedere il dettaglio nutrizionale",
+    "sinRegistrar": "Non registrato",
+    "comidaLibre": "Pasto libero",
+    "noRegistrado": "Non registrato"
   },
   "myProfilePage": {
     "expiróEl": "Scaduto il",
@@ -4926,7 +4937,10 @@
     "noSePudoCambiarElEmailInténtaloD": "Impossibile cambiare l'email. Riprova."
   },
   "myWorkoutsPage": {
-    "seleccionaUnDíaDeEntrenamientoPara": "Seleziona un giorno di allenamento per vedere gli esercizi"
+    "seleccionaUnDíaDeEntrenamientoPara": "Seleziona un giorno di allenamento per vedere gli esercizi",
+    "sinAsignar": "Non assegnato",
+    "sinFecha": "Senza data",
+    "sinPrograma": "Nessun programma"
   },
   "clientDetailPage": {
     "pérdidaDeGrasa": "Perdita di Grasso",
@@ -4937,29 +4951,61 @@
     "opcionalPermiteEnviarleCampañasYDe": "Opzionale. Permette di inviargli campagne e sconti via email.",
     "noLeído": "Non letto",
     "tuCatálogoEstáVacíoCreaSuplementos": "Il tuo catalogo è vuoto. Crea integratori nella sezione Integratori.",
-    "estásSeguroDeQueQuieresEliminarEs": "Sei sicuro di voler eliminare questo programma di allenamento assegnato? Questa azione non può essere annullata."
+    "estásSeguroDeQueQuieresEliminarEs": "Sei sicuro di voler eliminare questo programma di allenamento assegnato? Questa azione non può essere annullata.",
+    "entrenamientoRegistrado": "Allenamento registrato",
+    "sesionCompletada": "Sessione completata",
+    "progresoActualizado": "Progresso aggiornato",
+    "chatDeshabilitado": "Chat disabilitata",
+    "chatHabilitado": "Chat abilitata",
+    "aceptado": "Accettato",
+    "noAceptado": "Non accettato",
+    "sinPauta": "Senza piano",
+    "sinFecha": "Senza data",
+    "completada": "Completata",
+    "enProgreso": "In corso",
+    "porHacer": "Da fare",
+    "comidaRegistrada": "Pasto registrato",
+    "medicionCorporal": "Misurazione corporea",
+    "sinCoincidencias": "Nessuna corrispondenza"
   },
   "clientsPage": {
     "añadirCliente": "Aggiungi Cliente",
     "empiezaAñadiendoTuPrimerClientePara": "Inizia aggiungendo il tuo primo cliente per gestire i suoi allenamenti, nutrizione e progresso.",
     "emailDescuentoReactivación": "Email sconto riattivazione",
-    "confirmarEliminaciónDefinitiva": "Conferma eliminazione definitiva"
+    "confirmarEliminaciónDefinitiva": "Conferma eliminazione definitiva",
+    "nombreRequerido": "Nome obbligatorio",
+    "apellidoRequerido": "Cognome obbligatorio",
+    "eliminarDefinitivamente": "Elimina definitivamente",
+    "borrarPermanentemente": "Elimina permanentemente",
+    "moverAEliminados": "Sposta in Eliminati"
   },
   "communityBenefitsPage": {
     "elTítuloEsObligatorio": "Il titolo è obbligatorio",
-    "eliminarEsteBeneficio": "Eliminare questo beneficio?"
+    "eliminarEsteBeneficio": "Eliminare questo beneficio?",
+    "beneficioActualizado": "Beneficio aggiornato",
+    "beneficioCreado": "Beneficio creato",
+    "guardarCambios": "Salva modifiche",
+    "crearBeneficio": "Crea beneficio",
+    "editarBeneficio": "Modifica beneficio",
+    "nuevoBeneficio": "Nuovo beneficio"
   },
   "formsPage": {
     "discriminación": "Discriminazione",
     "elFormularioEstáActivo": "Il modulo è attivo.",
-    "losClientesVeránUnaNotificaciónPers": "I clienti vedranno una notifica persistente fino al completamento."
+    "losClientesVeránUnaNotificaciónPers": "I clienti vedranno una notifica persistente fino al completamento.",
+    "clienteDesconocido": "Cliente sconosciuto",
+    "nombreRequerido": "Nome obbligatorio",
+    "sinDescripcion": "Senza descrizione",
+    "enviarFormulario": "Invia modulo"
   },
   "nutritionPage": {
     "añadidoAFavoritos": "Aggiunto ai preferiti",
     "elAlimentoSeHaAñadidoATusFavorito": "L'alimento è stato aggiunto ai tuoi preferiti",
     "elSuplementoSeHaAñadidoATusFavori": "L'integratore è stato aggiunto ai tuoi preferiti",
     "porción": "porzione",
-    "guardaUnaCopiaReutilizableAdemásDel": "Salva una copia riutilizzabile oltre al piano del cliente"
+    "guardaUnaCopiaReutilizableAdemásDel": "Salva una copia riutilizzabile oltre al piano del cliente",
+    "nombreRequerido": "Nome obbligatorio",
+    "sinNombre": "Senza nome"
   },
   "clientOnboardingPage": {
     "mínimo8CaracteresConMayúsculaMinús": "Minimo 8 caratteri con maiuscola, minuscola e numero",
@@ -4972,29 +5018,50 @@
     "códigoPostalObligatorio": "Codice postale obbligatorio",
     "debesAceptarLaPolíticaDePrivacidad": "Devi accettare l'informativa sulla privacy",
     "año": "anno",
-    "esteProductoEstáCompletoApúntateA": "Questo prodotto è completo. Iscriviti alla lista d'attesa e ti avviseremo quando ci sarà un posto disponibile."
+    "esteProductoEstáCompletoApúntateA": "Questo prodotto è completo. Iscriviti alla lista d'attesa e ti avviseremo quando ci sarà un posto disponibile.",
+    "nombreRequerido": "Nome obbligatorio",
+    "apellidoRequerido": "Cognome obbligatorio",
+    "plazasAgotadas": "Posti esauriti",
+    "productoAgotado": "Prodotto esaurito",
+    "cambiarFoto": "Cambia foto",
+    "subirFoto": "Carica foto"
   },
   "invitationOnboardingPage": {
     "noSePudoCargarElFormularioDeSeQur": "Impossibile caricare il modulo SeQura. Riprova.",
     "teléfonoMóvilObligatorio": "Telefono cellulare obbligatorio",
     "tuEntrenadorLoNecesitaParaDiseñarT": "Il tuo allenatore ne ha bisogno per progettare il tuo piano su misura.",
     "ábreloYSigueDesdeAhíParaContinuar": "Aprilo e continua da lì per il tuo primo questionario.",
-    "suscripciónRecurrente": "Abbonamento ricorrente"
+    "suscripciónRecurrente": "Abbonamento ricorrente",
+    "nombreRequerido": "Nome obbligatorio",
+    "apellidoRequerido": "Cognome obbligatorio",
+    "rellenarCuestionario": "Compila questionario",
+    "irAMisFormularios": "Vai ai miei moduli",
+    "pagoUnico": "Pagamento unico"
   },
   "packagesPage": {
     "mínimo1Sesión": "Minimo 1 sessione",
-    "precioInválido": "Prezzo non valido"
+    "precioInválido": "Prezzo non valido",
+    "nombreRequerido": "Nome obbligatorio"
   },
   "billingPage": {
     "descripciónRequerida": "Descrizione richiesta",
-    "arrastraTuCertificadoP12PfxAquí": "Trascina qui il tuo certificato .p12 / .pfx"
+    "arrastraTuCertificadoP12PfxAquí": "Trascina qui il tuo certificato .p12 / .pfx",
+    "precioRequerido": "Prezzo obbligatorio",
+    "marcarPagada": "Segna come pagata",
+    "crearRectificativa": "Crea nota di credito",
+    "marcarPagado": "Segna come pagato",
+    "cobroManual": "Addebito manuale",
+    "emailEnviado": "Email inviata",
+    "sinDatos": "Nessun dato",
+    "tuEmpresa": "La tua azienda"
   },
   "catalogPage": {
     "códigoRequerido": "Codice richiesto",
     "productoFísicoNoSePuedeVincularA": "Prodotto fisico: non può essere collegato a box, macchine né membri del team.",
     "servicioPuedeVincularseABoxesMáqu": "Servizio: può essere collegato a box, macchine e membri del team.",
     "editarCupón": "Modifica Coupon",
-    "crearCupón": "Crea Coupon"
+    "crearCupón": "Crea Coupon",
+    "nombreRequerido": "Nome obbligatorio"
   },
   "settingsPage": {
     "vamosADarleGASNBorjaSanfélix": "Diamoci dentro! 💪🏽\\nBorja Sanfélix",
@@ -5004,10 +5071,62 @@
     "notificaciónCuandoSeRealizaUnFichaj": "Notifica quando viene effettuata una timbratura (dentro/fuori orario)",
     "avisoCuandoNoSeHaFichadoYDebería": "Avviso quando non è stata effettuata la timbratura prevista",
     "esperandoConexión": "In attesa di connessione...",
-    "renovaciónInformaciónNoDisponible": "Rinnovo: informazione non disponibile"
+    "renovaciónInformaciónNoDisponible": "Rinnovo: informazione non disponibile",
+    "noCoinciden": "Non corrispondono"
   },
   "stockPage": {
     "mín": "Min",
-    "máx": "Max"
+    "máx": "Max",
+    "guardarCambios": "Salva modifiche",
+    "crearElemento": "Crea elemento"
+  },
+  "supplementLibrary": {
+    "nombreRequerido": "Nome obbligatorio",
+    "sinDescripcion": "Senza descrizione"
+  },
+  "roleManager": {
+    "nombreRequerido": "Nome obbligatorio",
+    "sinDescripcion": "Senza descrizione"
+  },
+  "myProgressPage": {
+    "sinFecha": "Senza data"
+  },
+  "emailTemplatesPage": {
+    "nombreRequerido": "Nome obbligatorio",
+    "guardarCambios": "Salva modifiche"
+  },
+  "onboardingPage": {
+    "nombreRequerido": "Nome obbligatorio",
+    "apellidoRequerido": "Cognome obbligatorio"
+  },
+  "paymentsPage": {
+    "nombreRequerido": "Nome obbligatorio",
+    "precioRequerido": "Prezzo obbligatorio",
+    "marcarPagada": "Segna come pagata",
+    "crearRectificativa": "Crea nota di credito",
+    "emailEnviado": "Email inviata",
+    "marcarPagado": "Segna come pagato",
+    "cobroManual": "Addebito manuale",
+    "sinDatos": "Nessun dato",
+    "tuEmpresa": "La tua azienda"
+  },
+  "reportsPage": {
+    "sinClientes": "Nessun cliente"
+  },
+  "suppliersPage": {
+    "nombreObligatorio": "Nome obbligatorio",
+    "emailInvalido": "Email non valida",
+    "nuevoProveedor": "Nuovo fornitore",
+    "guardarCambios": "Salva modifiche",
+    "crearProveedor": "Crea fornitore"
+  },
+  "timeClockPage": {
+    "pausaRegistrada": "Pausa registrata",
+    "retornoDePausaRegistrado": "Fine pausa registrata",
+    "enCurso": "In corso"
+  },
+  "workoutsPage": {
+    "sinNombre": "Senza nome",
+    "nombreRequerido": "Nome obbligatorio"
   }
 }

@@ -130,7 +130,7 @@ export function WorkoutsPage() {
   );
   const clientOptions = (clientsData?.items || []).map((c: { id: string; first_name?: string; last_name?: string }) => ({
     value: c.id,
-    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre",
+    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || t("workoutsPage.sinNombre"),
   }));
 
   // Pasamos el filtro de origen al backend para que la query sólo devuelva
@@ -203,7 +203,7 @@ export function WorkoutsPage() {
   const clientsMap = useMemo(() => {
     const map = new Map<string, string>();
     (clientsData?.items || []).forEach((c: { id: string; first_name?: string; last_name?: string }) => {
-      map.set(c.id, `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre");
+      map.set(c.id, `${c.first_name || ""} ${c.last_name || ""}`.trim() || t("workoutsPage.sinNombre"));
     });
     return map;
   }, [clientsData]);
@@ -333,7 +333,7 @@ export function WorkoutsPage() {
       video_url: "",
     },
     validate: {
-      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
+      name: (value) => (value.length < 2 ? t("workoutsPage.nombreRequerido") : null),
     },
   });
 
@@ -376,7 +376,7 @@ export function WorkoutsPage() {
       review_interval_days: null as number | null,
     },
     validate: {
-      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
+      name: (value) => (value.length < 2 ? t("workoutsPage.nombreRequerido") : null),
     },
   });
 

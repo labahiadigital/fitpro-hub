@@ -89,7 +89,7 @@ export function EmailTemplatesPage() {
   const form = useForm<FormValues>({
     initialValues: INITIAL_VALUES,
     validate: {
-      name: (v) => (v.length < 2 ? "Nombre requerido" : null),
+      name: (v) => (v.length < 2 ? t("emailTemplatesPage.nombreRequerido") : null),
       subject: (v) => (v.length < 2 ? "Asunto requerido" : null),
       body_html: (v) => (v.length < 5 ? "Cuerpo requerido" : null),
     },
@@ -376,7 +376,7 @@ export function EmailTemplatesPage() {
                   },
                 }}
               >
-                {editingId ? "Guardar cambios" : "Crear plantilla"}
+                {editingId ? t("emailTemplatesPage.guardarCambios") : "Crear plantilla"}
               </Button>
             </Group>
           </Stack>

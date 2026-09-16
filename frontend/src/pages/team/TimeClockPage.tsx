@@ -210,7 +210,7 @@ function ClockTab() {
       } else {
         togglePause.mutate({}, {
           onSuccess: () => {
-            setSuccessMessage(action === "pause" ? "Pausa registrada" : "Retorno de pausa registrado");
+            setSuccessMessage(action === "pause" ? t("timeClockPage.pausaRegistrada") : t("timeClockPage.retornoDePausaRegistrado"));
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
           },
@@ -339,7 +339,7 @@ function ClockTab() {
             {myRecordsToday.map((r: any) => (
               <Group key={r.id} gap="xs" justify="space-between">
                 <Text size="xs">Entrada: {formatTime(r.clock_in)}</Text>
-                <Text size="xs">{r.clock_out ? `Salida: ${formatTime(r.clock_out)}` : "En curso"}</Text>
+                <Text size="xs">{r.clock_out ? `Salida: ${formatTime(r.clock_out)}` : t("timeClockPage.enCurso")}</Text>
                 {r.pauses && r.pauses.length > 0 && (
                   <Badge size="xs" variant="light">{r.pauses.length} pausa(s)</Badge>
                 )}

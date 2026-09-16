@@ -241,7 +241,7 @@ export function CatalogPage() {
       sold_out_waitlist_success: "",
     },
     validate: {
-      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
+      name: (value) => (value.length < 2 ? t("catalogPage.nombreRequerido") : null),
       price: (value) => (value < 0 ? "Precio no puede ser negativo" : null),
       max_users: (value) => (value !== null && value !== undefined && value < 1 ? "Debe ser >= 1" : null),
       sold_out_redirect_url: (value, values) =>
@@ -263,7 +263,7 @@ export function CatalogPage() {
       isActive: true,
     },
     validate: {
-      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
+      name: (value) => (value.length < 2 ? t("catalogPage.nombreRequerido") : null),
       totalSessions: (value) => (value < 1 ? t("packagesPage.mínimo1Sesión") : null),
       price: (value) => (value < 0 ? t("packagesPage.precioInválido") : null),
     },

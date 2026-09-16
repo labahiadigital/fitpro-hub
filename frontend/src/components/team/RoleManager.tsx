@@ -185,7 +185,7 @@ export function RoleManager() {
       permissions: {} as Record<string, string[]>,
     },
     validate: {
-      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
+      name: (value) => (value.length < 2 ? t("roleManager.nombreRequerido") : null),
     },
   });
 
@@ -336,7 +336,7 @@ export function RoleManager() {
             </Group>
 
             <Text c="dimmed" size="sm" mb="md">
-              {role.description || "Sin descripción"}
+              {role.description || t("roleManager.sinDescripcion")}
             </Text>
 
             <Group gap="xs" mb="md">

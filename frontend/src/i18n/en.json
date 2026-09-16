@@ -105,7 +105,8 @@
     "copiado": "Copied!",
     "copiarEnlace": "Copy public link",
     "copiarCodigo": "Copy code",
-    "cliente": "Client"
+    "cliente": "Client",
+    "nombreRequerido": "Name required"
   },
   "nav": {
     "mainMenu": "Main Menu",
@@ -1219,7 +1220,9 @@
     "no_se_pudo_actualizar_el_estado": "Could not update the status",
     "automatizacion_eliminada": "Automation deleted",
     "la_automatizacion_se_ha_eliminado_correctamente": "The automation has been deleted successfully",
-    "no_se_pudo_eliminar_la_automatizacion": "Could not delete the automation"
+    "no_se_pudo_eliminar_la_automatizacion": "Could not delete the automation",
+    "ejOnboarding": "E.g.: New client onboarding",
+    "seleccionaUnDisparador": "Select a trigger"
   },
   "boxes": {
     "nombre": "Name",
@@ -4889,19 +4892,24 @@
     "sáb": "Sat",
     "sesión": "Session",
     "modificarSesiónCita": "Modify Session/Appointment",
-    "detalleDeSesiónCita": "Session/Appointment Detail"
+    "detalleDeSesiónCita": "Session/Appointment Detail",
+    "sinCliente": "No client",
+    "noEspecificado": "Not specified",
+    "noEspecificada": "Not specified"
   },
   "chatPage": {
     "comunícateConTuEntrenador": "Communicate with your trainer",
     "comunícateConTusClientesYEquipo": "Communicate with your clients and team",
     "whatsAppNoEstáConectadoEnEsteWorks": "WhatsApp is not connected in this workspace",
-    "esteClienteNoTieneNúmeroDeTeléfono": "This client has no phone number"
+    "esteClienteNoTieneNúmeroDeTeléfono": "This client has no phone number",
+    "sinNombre": "No name"
   },
   "clientDashboardPage": {
     "género": "gender",
     "ComplétaloCuandoPuedas": " — complete it when you can.",
     "tienesUnaRevisiónPendiente": "You have a pending review",
-    "próximaRevisión": "Next review"
+    "próximaRevisión": "Next review",
+    "sinObjetivo": "No goal"
   },
   "myCalendarPage": {
     "noHaySesionesParaEsteDía": "No sessions for this day",
@@ -4914,7 +4922,10 @@
   "myNutritionPage": {
     "noSeEncontraronRecetasConEsaBúsque": "No recipes found with that search.",
     "tuEntrenadorAúnNoHaCompartidoRecet": "Your trainer hasn't shared any recipes with you yet.",
-    "seleccionaUnDíaParaVerElDetalleNu": "Select a day to see the nutritional detail"
+    "seleccionaUnDíaParaVerElDetalleNu": "Select a day to see the nutritional detail",
+    "sinRegistrar": "Not logged",
+    "comidaLibre": "Free meal",
+    "noRegistrado": "Not logged"
   },
   "myProfilePage": {
     "expiróEl": "Expired on",
@@ -4926,7 +4937,10 @@
     "noSePudoCambiarElEmailInténtaloD": "Could not change the email. Please try again."
   },
   "myWorkoutsPage": {
-    "seleccionaUnDíaDeEntrenamientoPara": "Select a training day to see the exercises"
+    "seleccionaUnDíaDeEntrenamientoPara": "Select a training day to see the exercises",
+    "sinAsignar": "Unassigned",
+    "sinFecha": "No date",
+    "sinPrograma": "No program"
   },
   "clientDetailPage": {
     "pérdidaDeGrasa": "Fat Loss",
@@ -4937,29 +4951,61 @@
     "opcionalPermiteEnviarleCampañasYDe": "Optional. Allows sending campaigns and discounts by email.",
     "noLeído": "Unread",
     "tuCatálogoEstáVacíoCreaSuplementos": "Your catalog is empty. Create supplements in the Supplements section.",
-    "estásSeguroDeQueQuieresEliminarEs": "Are you sure you want to delete this assigned training program? This action cannot be undone."
+    "estásSeguroDeQueQuieresEliminarEs": "Are you sure you want to delete this assigned training program? This action cannot be undone.",
+    "entrenamientoRegistrado": "Workout logged",
+    "sesionCompletada": "Session completed",
+    "progresoActualizado": "Progress updated",
+    "chatDeshabilitado": "Chat disabled",
+    "chatHabilitado": "Chat enabled",
+    "aceptado": "Accepted",
+    "noAceptado": "Not accepted",
+    "sinPauta": "No plan",
+    "sinFecha": "No date",
+    "completada": "Completed",
+    "enProgreso": "In progress",
+    "porHacer": "To do",
+    "comidaRegistrada": "Meal logged",
+    "medicionCorporal": "Body measurement",
+    "sinCoincidencias": "No matches"
   },
   "clientsPage": {
     "añadirCliente": "Add Client",
     "empiezaAñadiendoTuPrimerClientePara": "Start by adding your first client to manage their workouts, nutrition and progress.",
     "emailDescuentoReactivación": "Reactivation discount email",
-    "confirmarEliminaciónDefinitiva": "Confirm permanent deletion"
+    "confirmarEliminaciónDefinitiva": "Confirm permanent deletion",
+    "nombreRequerido": "Name required",
+    "apellidoRequerido": "Last name required",
+    "eliminarDefinitivamente": "Delete permanently",
+    "borrarPermanentemente": "Delete permanently",
+    "moverAEliminados": "Move to Deleted"
   },
   "communityBenefitsPage": {
     "elTítuloEsObligatorio": "Title is required",
-    "eliminarEsteBeneficio": "Delete this benefit?"
+    "eliminarEsteBeneficio": "Delete this benefit?",
+    "beneficioActualizado": "Benefit updated",
+    "beneficioCreado": "Benefit created",
+    "guardarCambios": "Save changes",
+    "crearBeneficio": "Create benefit",
+    "editarBeneficio": "Edit benefit",
+    "nuevoBeneficio": "New benefit"
   },
   "formsPage": {
     "discriminación": "Discrimination",
     "elFormularioEstáActivo": "The form is active.",
-    "losClientesVeránUnaNotificaciónPers": "Clients will see a persistent notification until they complete it."
+    "losClientesVeránUnaNotificaciónPers": "Clients will see a persistent notification until they complete it.",
+    "clienteDesconocido": "Unknown client",
+    "nombreRequerido": "Name required",
+    "sinDescripcion": "No description",
+    "enviarFormulario": "Send form"
   },
   "nutritionPage": {
     "añadidoAFavoritos": "Added to favorites",
     "elAlimentoSeHaAñadidoATusFavorito": "The food has been added to your favorites",
     "elSuplementoSeHaAñadidoATusFavori": "The supplement has been added to your favorites",
     "porción": "portion",
-    "guardaUnaCopiaReutilizableAdemásDel": "Save a reusable copy in addition to the client's plan"
+    "guardaUnaCopiaReutilizableAdemásDel": "Save a reusable copy in addition to the client's plan",
+    "nombreRequerido": "Name required",
+    "sinNombre": "No name"
   },
   "clientOnboardingPage": {
     "mínimo8CaracteresConMayúsculaMinús": "Minimum 8 characters with uppercase, lowercase and number",
@@ -4972,29 +5018,50 @@
     "códigoPostalObligatorio": "Postal code required",
     "debesAceptarLaPolíticaDePrivacidad": "You must accept the privacy policy",
     "año": "year",
-    "esteProductoEstáCompletoApúntateA": "This product is full. Join the waiting list and we'll notify you when a spot is available."
+    "esteProductoEstáCompletoApúntateA": "This product is full. Join the waiting list and we'll notify you when a spot is available.",
+    "nombreRequerido": "Name required",
+    "apellidoRequerido": "Last name required",
+    "plazasAgotadas": "Sold out",
+    "productoAgotado": "Product sold out",
+    "cambiarFoto": "Change photo",
+    "subirFoto": "Upload photo"
   },
   "invitationOnboardingPage": {
     "noSePudoCargarElFormularioDeSeQur": "Could not load the SeQura form. Please try again.",
     "teléfonoMóvilObligatorio": "Mobile phone required",
     "tuEntrenadorLoNecesitaParaDiseñarT": "Your trainer needs it to design your custom plan.",
     "ábreloYSigueDesdeAhíParaContinuar": "Open it and continue from there for your first questionnaire.",
-    "suscripciónRecurrente": "Recurring subscription"
+    "suscripciónRecurrente": "Recurring subscription",
+    "nombreRequerido": "Name required",
+    "apellidoRequerido": "Last name required",
+    "rellenarCuestionario": "Fill out questionnaire",
+    "irAMisFormularios": "Go to my forms",
+    "pagoUnico": "One-time payment"
   },
   "packagesPage": {
     "mínimo1Sesión": "Minimum 1 session",
-    "precioInválido": "Invalid price"
+    "precioInválido": "Invalid price",
+    "nombreRequerido": "Name required"
   },
   "billingPage": {
     "descripciónRequerida": "Description required",
-    "arrastraTuCertificadoP12PfxAquí": "Drag your .p12 / .pfx certificate here"
+    "arrastraTuCertificadoP12PfxAquí": "Drag your .p12 / .pfx certificate here",
+    "precioRequerido": "Price required",
+    "marcarPagada": "Mark as paid",
+    "crearRectificativa": "Create credit note",
+    "marcarPagado": "Mark as paid",
+    "cobroManual": "Manual charge",
+    "emailEnviado": "Email sent",
+    "sinDatos": "No data",
+    "tuEmpresa": "Your company"
   },
   "catalogPage": {
     "códigoRequerido": "Code required",
     "productoFísicoNoSePuedeVincularA": "Physical product: cannot be linked to boxes, machines or team members.",
     "servicioPuedeVincularseABoxesMáqu": "Service: can be linked to boxes, machines and team members.",
     "editarCupón": "Edit Coupon",
-    "crearCupón": "Create Coupon"
+    "crearCupón": "Create Coupon",
+    "nombreRequerido": "Name required"
   },
   "settingsPage": {
     "vamosADarleGASNBorjaSanfélix": "Let's do this! 💪🏽\\nBorja Sanfélix",
@@ -5004,10 +5071,62 @@
     "notificaciónCuandoSeRealizaUnFichaj": "Notification when a clock-in/out occurs (within/outside schedule)",
     "avisoCuandoNoSeHaFichadoYDebería": "Alert when clock-in was missed and should have been done",
     "esperandoConexión": "Waiting for connection...",
-    "renovaciónInformaciónNoDisponible": "Renewal: information not available"
+    "renovaciónInformaciónNoDisponible": "Renewal: information not available",
+    "noCoinciden": "Don't match"
   },
   "stockPage": {
     "mín": "Min",
-    "máx": "Max"
+    "máx": "Max",
+    "guardarCambios": "Save changes",
+    "crearElemento": "Create Item"
+  },
+  "supplementLibrary": {
+    "nombreRequerido": "Name required",
+    "sinDescripcion": "No description"
+  },
+  "roleManager": {
+    "nombreRequerido": "Name required",
+    "sinDescripcion": "No description"
+  },
+  "myProgressPage": {
+    "sinFecha": "No date"
+  },
+  "emailTemplatesPage": {
+    "nombreRequerido": "Name required",
+    "guardarCambios": "Save changes"
+  },
+  "onboardingPage": {
+    "nombreRequerido": "Name required",
+    "apellidoRequerido": "Last name required"
+  },
+  "paymentsPage": {
+    "nombreRequerido": "Name required",
+    "precioRequerido": "Price required",
+    "marcarPagada": "Mark as paid",
+    "crearRectificativa": "Create credit note",
+    "emailEnviado": "Email sent",
+    "marcarPagado": "Mark as paid",
+    "cobroManual": "Manual charge",
+    "sinDatos": "No data",
+    "tuEmpresa": "Your company"
+  },
+  "reportsPage": {
+    "sinClientes": "No clients"
+  },
+  "suppliersPage": {
+    "nombreObligatorio": "Name required",
+    "emailInvalido": "Invalid email",
+    "nuevoProveedor": "New supplier",
+    "guardarCambios": "Save changes",
+    "crearProveedor": "Create supplier"
+  },
+  "timeClockPage": {
+    "pausaRegistrada": "Break logged",
+    "retornoDePausaRegistrado": "Break end logged",
+    "enCurso": "In progress"
+  },
+  "workoutsPage": {
+    "sinNombre": "No name",
+    "nombreRequerido": "Name required"
   }
 }

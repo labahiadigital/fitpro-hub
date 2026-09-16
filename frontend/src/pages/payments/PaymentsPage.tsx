@@ -192,7 +192,7 @@ export function PaymentsPage() {
       sessions_included: 0,
     },
     validate: {
-      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
+      name: (value) => (value.length < 2 ? t("paymentsPage.nombreRequerido") : null),
       price: (value) => (value < 0 ? "Precio no puede ser negativo" : null),
     },
   });
@@ -234,7 +234,7 @@ export function PaymentsPage() {
       client_name: (v) => (!v ? "Nombre del cliente requerido" : null),
       items: {
         description: (v) => (!v ? t("billingPage.descripciónRequerida") : null),
-        unit_price: (v) => (v <= 0 ? "Precio requerido" : null),
+        unit_price: (v) => (v <= 0 ? t("paymentsPage.precioRequerido") : null),
       },
     },
   });
@@ -394,7 +394,7 @@ export function PaymentsPage() {
     openConfirm({
       title: t("payments.marcarComoPagada"),
       message: `¿Marcar como pagada la factura ${inv.invoice_number} (${formatDecimal(Number(inv.total), 2)} €)?`,
-      confirmLabel: "Marcar pagada",
+      confirmLabel: t("paymentsPage.marcarPagada"),
       color: "green",
       onConfirm: async () => { try { await markInvoicePaid.mutateAsync({ id: inv.id }); } catch { /* handled */ } },
     });
@@ -416,7 +416,7 @@ export function PaymentsPage() {
     openConfirm({
       title: t("payments.facturaRectificativa"),
       message: `¿Crear una factura rectificativa para ${inv.invoice_number}?`,
-      confirmLabel: "Crear rectificativa",
+      confirmLabel: t("paymentsPage.crearRectificativa"),
       color: "orange",
       onConfirm: async () => { try { await createRectificative.mutateAsync(inv.id); } catch { /* handled */ } },
     });
@@ -538,7 +538,7 @@ export function PaymentsPage() {
   };
 
   const auditActionLabel = (a: string) => {
-    const map: Record<string, string> = { created: "Creada", updated: "Editada", finalized: "Emitida", sent: "Enviada", paid: "Pagada", cancelled: "Anulada", rectified: "Rectificada", email_sent: "Email enviado", pdf_generated: "PDF generado" };
+    const map: Record<string, string> = { created: "Creada", updated: "Editada", finalized: "Emitida", sent: "Enviada", paid: "Pagada", cancelled: "Anulada", rectified: "Rectificada", email_sent: t("paymentsPage.emailEnviado"), pdf_generated: "PDF generado" };
     return map[a] || a;
   };
 
@@ -604,7 +604,7 @@ export function PaymentsPage() {
     openConfirm({
       title: t("payments.marcarComoPagado"),
       message: `¿Marcar el cobro de €${formatDecimal(Number(payment.amount), 2)} como pagado?`,
-      confirmLabel: "Marcar pagado",
+      confirmLabel: t("paymentsPage.marcarPagado"),
       color: "green",
       onConfirm: async () => { try { await markPaymentPaid.mutateAsync(payment.id); } catch { /* handled */ } },
     });
@@ -636,7 +636,7 @@ export function PaymentsPage() {
         client_id: values.client_id || undefined,
         product_id: values.product_id || undefined,
         amount,
-        description: values.description || selectedProduct?.name || "Cobro manual",
+        description: values.description || selectedProduct?.name || t("paymentsPage.cobroManual"),
         payment_type: selectedProduct?.type || "one_time",
       });
       closeChargeModal();
@@ -885,7 +885,7 @@ export function PaymentsPage() {
                         sections={total > 0 ? [
                           { value: subPct, color: "var(--nv-primary)", tooltip: `Suscripciones: ${subPct}%` },
                           { value: otherPct, color: "var(--nv-success)", tooltip: `Otros: ${otherPct}%` },
-                        ] : [{ value: 100, color: "var(--nv-border)", tooltip: "Sin datos" }]}
+                        ] : [{ value: 100, color: "var(--nv-border)", tooltip: t("paymentsPage.sinDatos") }]}
                         size={180}
                         thickness={20}
                       />
@@ -2313,7 +2313,7 @@ export function PaymentsPage() {
 
                         <Divider label={t("payments.sistemaInformaticoObligatorioAeat")} labelPosition="left" variant="dashed" />
                         <Group grow>
-                          <TextInput label={t("payments.razonSocialDesarrollador")} placeholder={settingsForm.values.business_name || "Tu empresa"} {...settingsForm.getInputProps("software_company_name")} />
+                          <TextInput label={t("payments.razonSocialDesarrollador")} placeholder={settingsForm.values.business_name || t("paymentsPage.tuEmpresa")} {...settingsForm.getInputProps("software_company_name")} />
                           <TextInput label={t("payments.nifDesarrollador")} placeholder={settingsForm.values.tax_id || "B12345678"} {...settingsForm.getInputProps("software_company_nif")} />
                         </Group>
                         <Group grow>

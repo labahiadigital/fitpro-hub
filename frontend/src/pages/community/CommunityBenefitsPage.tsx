@@ -136,7 +136,7 @@ export function CommunityBenefitsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["community-benefits"] });
       notifications.show({
-        title: editing ? "Beneficio actualizado" : "Beneficio creado",
+        title: editing ? t("communityBenefitsPage.beneficioActualizado") : t("communityBenefitsPage.beneficioCreado"),
         message: t("community.yaEstaDisponibleParaTus"),
         color: "green",
       });
@@ -215,7 +215,7 @@ export function CommunityBenefitsPage() {
             {t("community.cancelar")}
           </Button>
           <Button type="submit" loading={upsert.isPending}>
-            {editing ? "Guardar cambios" : "Crear beneficio"}
+            {editing ? t("communityBenefitsPage.guardarCambios") : t("communityBenefitsPage.crearBeneficio")}
           </Button>
         </Group>
       </Stack>
@@ -377,7 +377,7 @@ export function CommunityBenefitsPage() {
             setEditing(null);
             close();
           }}
-          title={editing ? "Editar beneficio" : "Nuevo beneficio"}
+          title={editing ? t("communityBenefitsPage.editarBeneficio") : t("communityBenefitsPage.nuevoBeneficio")}
         >
           <Box p="md">{formContent}</Box>
         </BottomSheet>
@@ -411,7 +411,7 @@ export function CommunityBenefitsPage() {
             >
               <Group justify="space-between" mb="md">
                 <Text fw={700} size="lg">
-                  {editing ? "Editar beneficio" : "Nuevo beneficio"}
+                  {editing ? t("communityBenefitsPage.editarBeneficio") : t("communityBenefitsPage.nuevoBeneficio")}
                 </Text>
               </Group>
               {formContent}

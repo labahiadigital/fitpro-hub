@@ -1426,8 +1426,8 @@ export function ClientDetailPage() {
       items.push({
         id: `workout-${(log as any).id}`,
         type: "workout",
-        title: safeString(l.workout_name) || "Entrenamiento registrado",
-        description: descParts.join(" · ") || "Sesión completada",
+        title: safeString(l.workout_name) || t("clientDetailPage.entrenamientoRegistrado"),
+        description: descParts.join(" · ") || t("clientDetailPage.sesionCompletada"),
         date,
       });
     }
@@ -1456,7 +1456,7 @@ export function ClientDetailPage() {
         id: `measurement-${m.id}`,
         type: "form",
         title: t("clientDetail.nuevaMedidaRegistrada"),
-        description: parts.join(" · ") || "Progreso actualizado",
+        description: parts.join(" · ") || t("clientDetailPage.progresoActualizado"),
         date,
       });
     }
@@ -1684,7 +1684,7 @@ export function ClientDetailPage() {
       });
       notifications.show({
         title: t("clientDetail.chatActualizado"),
-        message: client.chat_enabled ? "Chat deshabilitado" : "Chat habilitado",
+        message: client.chat_enabled ? t("clientDetailPage.chatDeshabilitado") : t("clientDetailPage.chatHabilitado"),
         color: "green",
       });
     } catch (error) {
@@ -2970,7 +2970,7 @@ export function ClientDetailPage() {
                             variant={it.value ? "filled" : "light"}
                             size="sm"
                           >
-                            {it.value ? "Aceptado" : "No aceptado"}
+                            {it.value ? t("clientDetailPage.aceptado") : t("clientDetailPage.noAceptado")}
                           </Badge>
                         </Group>
                       </Paper>
@@ -3989,7 +3989,7 @@ export function ClientDetailPage() {
                                 .filter(Boolean)
                                 .join(" · ") ||
                                 supp.supplement_brand ||
-                                "Sin pauta"}
+                                t("clientDetailPage.sinPauta")}
                             </Text>
                             {supp.notes && (
                               <Text c="dimmed" size="xs" mt={4} lineClamp={2}>
@@ -4271,7 +4271,7 @@ export function ClientDetailPage() {
                         <Text fw={600} size="sm">
                           {session.date && !isNaN(new Date(session.date).getTime())
                             ? new Date(session.date).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" })
-                            : "Sin fecha"}
+                            : t("clientDetailPage.sinFecha")}
                         </Text>
                       </Table.Td>
                       <Table.Td><Text size="sm">{session.time}</Text></Table.Td>
@@ -4283,7 +4283,7 @@ export function ClientDetailPage() {
                           variant="light"
                           radius="xl"
                         >
-                          {session.status === "completed" ? "Completada" : "Confirmada"}
+                          {session.status === "completed" ? t("clientDetailPage.completada") : "Confirmada"}
                         </Badge>
                       </Table.Td>
                       <Table.Td>
@@ -4461,7 +4461,7 @@ export function ClientDetailPage() {
                               <Text fw={600} size="sm">
                                 {m.date && !isNaN(new Date(m.date).getTime())
                                   ? new Date(m.date).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })
-                                  : "Sin fecha"}
+                                  : t("clientDetailPage.sinFecha")}
                               </Text>
                             </Table.Td>
                             <Table.Td>
@@ -4542,7 +4542,7 @@ export function ClientDetailPage() {
                     const logDate = rawLog.completed_at || rawLog.date || (log as any).created_at;
                     const dateStr = logDate && !isNaN(new Date(logDate).getTime())
                       ? new Date(logDate).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })
-                      : "Sin fecha";
+                      : t("clientDetailPage.sinFecha");
                     return (
                       <WorkoutLogCard key={log.id || index} log={log} dateStr={dateStr} />
                     );
@@ -4639,7 +4639,7 @@ export function ClientDetailPage() {
                             ? new Date(photo.measurement_date).toLocaleDateString("es-ES")
                             : photo.uploaded_at 
                               ? new Date(photo.uploaded_at).toLocaleDateString("es-ES")
-                              : "Sin fecha"}
+                              : t("clientDetailPage.sinFecha")}
                         </Text>
                       </Stack>
                     </Card>
@@ -4929,7 +4929,7 @@ export function ClientDetailPage() {
                           size="sm"
                           color={task.status === "done" ? "green" : task.status === "in_progress" ? "blue" : "gray"}
                         >
-                          {task.status === "done" ? "Completada" : task.status === "in_progress" ? "En progreso" : "Por hacer"}
+                          {task.status === "done" ? t("clientDetailPage.completada") : task.status === "in_progress" ? t("clientDetailPage.enProgreso") : t("clientDetailPage.porHacer")}
                         </Badge>
                       </Table.Td>
                       <Table.Td>
@@ -4975,14 +4975,14 @@ export function ClientDetailPage() {
                     date: day.date || meal.logged_at,
                     type: "nutrition" as const,
                     title: t("clientDetail.registroNutricional"),
-                    desc: meal.meal_name || "Comida registrada",
+                    desc: meal.meal_name || t("clientDetailPage.comidaRegistrada"),
                   }))
                 ),
                 ...clientMeasurements.map((m: any) => ({
                   date: m.created_at || m.date,
                   type: "measurement" as const,
                   title: t("clientDetail.medicionRegistrada"),
-                  desc: m.weight_kg ? `Peso: ${m.weight_kg} kg` : "Medición corporal",
+                  desc: m.weight_kg ? `Peso: ${m.weight_kg} kg` : t("clientDetailPage.medicionCorporal"),
                 })),
               ]
                 .filter(e => e.date)
@@ -5353,7 +5353,7 @@ export function ClientDetailPage() {
             nothingFoundMessage={
               catalogSupplements.length === 0
                 ? t("clientDetailPage.tuCatálogoEstáVacíoCreaSuplementos")
-                : "Sin coincidencias"
+                : t("clientDetailPage.sinCoincidencias")
             }
           />
           <SimpleGrid cols={{ base: 1, sm: 2 }}>

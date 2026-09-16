@@ -534,7 +534,7 @@ export function MyProgressPage() {
         dateKey,
         label:
           dateKey === "sin-fecha"
-            ? "Sin fecha"
+            ? t("myProgressPage.sinFecha")
             : new Date(dateKey + "T12:00:00").toLocaleDateString("es-ES", {
                 day: "numeric",
                 month: "long",
@@ -1255,7 +1255,7 @@ export function MyProgressPage() {
                     const dateStr = photo.measurement_date || photo.uploaded_at || "";
                     const dateLabel = dateStr
                       ? new Date(dateStr).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
-                      : "Sin fecha";
+                      : t("myProgressPage.sinFecha");
                     const photoDate = dateStr.split("T")[0];
                     const matchingMeasurement = measurements?.find((m: any) => {
                       const mDate = (m.measured_at || m.created_at || "").split("T")[0];

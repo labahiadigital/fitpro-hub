@@ -105,8 +105,8 @@ export function OnboardingPage() {
       consent_marketing: false,
     },
     validate: {
-      first_name: (value) => (value.length < 2 ? "Nombre requerido" : null),
-      last_name: (value) => (value.length < 2 ? "Apellido requerido" : null),
+      first_name: (value) => (value.length < 2 ? t("onboardingPage.nombreRequerido") : null),
+      last_name: (value) => (value.length < 2 ? t("onboardingPage.apellidoRequerido") : null),
       consent_data_processing: (value) => (!value ? "Debes aceptar el tratamiento de datos" : null),
       consent_health_data: (value) => (!value ? "Debes aceptar el tratamiento de datos de salud" : null),
     },

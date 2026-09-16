@@ -139,7 +139,7 @@ export function PackagesPage() {
       isActive: true,
     },
     validate: {
-      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
+      name: (value) => (value.length < 2 ? t("packagesPage.nombreRequerido") : null),
       totalSessions: (value) => (value < 1 ? t("packagesPage.mínimo1Sesión") : null),
       price: (value) => (value < 0 ? t("packagesPage.precioInválido") : null),
     },
