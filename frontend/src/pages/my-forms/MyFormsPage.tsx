@@ -179,6 +179,7 @@ interface FormRespondCardProps {
 }
 
 function FormRespondCard({ item }: FormRespondCardProps) {
+  const { t } = useTranslation();
   const respond = useRespondMyForm();
   // Pre-rellenamos con las respuestas previas (si ya se envió) o con los
   // valores sugeridos por el backend a partir del perfil del cliente
@@ -215,13 +216,13 @@ function FormRespondCard({ item }: FormRespondCardProps) {
       });
       notifications.show({
         title: "Formulario enviado",
-        message: "Tu respuesta se ha registrado correctamente.",
+        message: t("myForms.tu_respuesta_se_ha_registrado_correctamente"),
         color: "green",
       });
     } catch {
       notifications.show({
         title: "Error",
-        message: "No se pudo enviar el formulario. Inténtalo de nuevo.",
+        message: t("myForms.no_se_pudo_enviar_el_formulario_intentalo_de_nuevo"),
         color: "red",
       });
     }

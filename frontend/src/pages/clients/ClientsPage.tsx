@@ -405,6 +405,7 @@ function AbandonedCartList({
   isDeleting: boolean;
   onRowClick: (invId: string) => void;
 }) {
+  const { t } = useTranslation();
   if (loading) {
     return (
       <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">{"Cargando carrito abandonado…"}</Text></Box>
@@ -602,9 +603,9 @@ function AbandonedCartList({
                 </Table.Td>
                 <Table.Td visibleFrom="md">
                   {i.marketing_consent === true ? (
-                    <Badge color="green" variant="light" size="xs">Sí</Badge>
+                    <Badge color="green" variant="light" size="xs">{t("clients.si")}</Badge>
                   ) : i.marketing_consent === false ? (
-                    <Badge color="gray" variant="light" size="xs">No</Badge>
+                    <Badge color="gray" variant="light" size="xs">{t("clients.no")}</Badge>
                   ) : (
                     <Text size="xs" c="dimmed">—</Text>
                   )}
@@ -1814,7 +1815,7 @@ export function ClientsPage() {
               onChange: setPage,
             }}
             searchable
-            searchPlaceholder="Buscar por nombre, email o teléfono..."
+            searchPlaceholder={t("clients.buscar_por_nombre_email_o_telefono")}
           />
         ) : (
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">

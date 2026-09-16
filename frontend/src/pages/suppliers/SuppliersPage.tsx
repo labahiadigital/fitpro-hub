@@ -338,7 +338,7 @@ export default function SuppliersPage() {
             data={filteredSuppliers}
             loading={isLoading}
             searchable
-            searchPlaceholder="Buscar por nombre, NIF, email..."
+            searchPlaceholder={t("suppliers.buscar_por_nombre_nif_email")}
             onSearch={setSearch}
             columns={[
               {

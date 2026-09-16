@@ -784,7 +784,7 @@ export function MyProgressPage() {
                     </Group>
                     <Group gap={4}>
                       <Box w={12} h={12} style={{ background: "#fa5252", borderRadius: 2 }} />
-                      <Text size="xs">% Grasa</Text>
+                      <Text size="xs">{t("myProgress.grasa")}</Text>
                     </Group>
                     <Group gap={4}>
                       <Box w={12} h={12} style={{ background: "#40c057", borderRadius: 2 }} />
@@ -1075,7 +1075,7 @@ export function MyProgressPage() {
                   <Table.Tr>
                     <Table.Th>{t("myProgress.fecha")}</Table.Th>
                     <Table.Th>{t("myProgress.peso")}</Table.Th>
-                    <Table.Th>% Grasa</Table.Th>
+                    <Table.Th>{t("myProgress.grasa")}</Table.Th>
                     <Table.Th>{t("myProgress.musculo")}</Table.Th>
                     <Table.Th>{t("myProgress.cambio")}</Table.Th>
                     <Table.Th>{t("myProgress.notas")}</Table.Th>
@@ -1283,7 +1283,7 @@ export function MyProgressPage() {
                             {matchingMeasurement ? (
                               <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="xs">
                                 {matchingMeasurement.weight_kg && <Box><Text size="xs" c="dimmed">{t("myProgress.peso")}</Text><Text fw={600}>{matchingMeasurement.weight_kg} kg</Text></Box>}
-                                {matchingMeasurement.body_fat_percentage && <Box><Text size="xs" c="dimmed">% Grasa</Text><Text fw={600}>{matchingMeasurement.body_fat_percentage}%</Text></Box>}
+                                {matchingMeasurement.body_fat_percentage && <Box><Text size="xs" c="dimmed">{t("myProgress.grasa")}</Text><Text fw={600}>{matchingMeasurement.body_fat_percentage}%</Text></Box>}
                                 {matchingMeasurement.muscle_mass_kg && <Box><Text size="xs" c="dimmed">{t("myProgress.masaMuscular")}</Text><Text fw={600}>{matchingMeasurement.muscle_mass_kg} kg</Text></Box>}
                                 {matchingMeasurement.measurements?.chest && <Box><Text size="xs" c="dimmed">{t("myProgress.pecho")}</Text><Text fw={600}>{matchingMeasurement.measurements.chest} cm</Text></Box>}
                                 {matchingMeasurement.measurements?.waist && <Box><Text size="xs" c="dimmed">{t("myProgress.cintura")}</Text><Text fw={600}>{matchingMeasurement.measurements.waist} cm</Text></Box>}

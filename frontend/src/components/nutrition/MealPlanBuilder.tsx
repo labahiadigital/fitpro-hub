@@ -61,6 +61,7 @@ import { MacroProportionBar } from "./MacroProportionBar";
 import { RecipeFormModal } from "../recipes/RecipeFormModal";
 import { useCreateRecipe } from "../../hooks/useRecipes";
 import type { RecipeItem } from "../../types/recipe";
+import { useTranslation } from "react-i18next";
 
 const FOOD_CATEGORIES = [
   { value: "Carnes", label: "Carnes" },
@@ -204,6 +205,7 @@ export function MealPlanBuilder({
   onWeekChange,
   onCopyWeek,
 }: MealPlanBuilderProps) {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [foodGroupSearch, setFoodGroupSearch] = useState("");
   const { data: foodGroupsList = [] } = useFoodGroups(foodGroupSearch || undefined);
@@ -384,8 +386,8 @@ export function MealPlanBuilder({
       queryClient.invalidateQueries({ queryKey: ["foods-modal-search"] });
       queryClient.invalidateQueries({ queryKey: ["foods"] });
       notifications.show({
-        title: "Alimento creado",
-        message: "El alimento ha sido creado correctamente",
+        title: t("mealPlanBuilder.alimento_creado"),
+        message: t("mealPlanBuilder.el_alimento_ha_sido_creado_correctamente"),
         color: "green",
       });
     },
@@ -2191,7 +2193,7 @@ export function MealPlanBuilder({
                             )
                           );
                           closeFoodModal();
-                          notifications.show({ title: "Receta añadida", message: recipe.name, color: "teal" });
+                          notifications.show({ title: t("mealPlanBuilder.receta_anadida"), message: recipe.name, color: "teal" });
                         }}
                       >
                         <Group justify="space-between" mb={4}>

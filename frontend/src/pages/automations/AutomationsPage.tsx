@@ -288,15 +288,15 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
           data: automationData,
         });
         notifications.show({
-          title: "Automatización actualizada",
-          message: "La automatización se ha actualizado correctamente",
+          title: t("automations.automatizacion_actualizada"),
+          message: t("automations.la_automatizacion_se_ha_actualizado_correctamente"),
           color: "green",
         });
       } else {
         await createAutomation.mutateAsync(automationData);
         notifications.show({
-          title: "Automatización creada",
-          message: "La automatización se ha creado correctamente",
+          title: t("automations.automatizacion_creada"),
+          message: t("automations.la_automatizacion_se_ha_creado_correctamente"),
           color: "green",
         });
       }
@@ -309,7 +309,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
     } catch (error) {
       notifications.show({
         title: "Error",
-        message: "No se pudo guardar la automatización",
+        message: t("automations.no_se_pudo_guardar_la_automatizacion"),
         color: "red",
       });
     }
@@ -326,7 +326,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
       } catch (error) {
         notifications.show({
           title: "Error",
-          message: "No se pudo actualizar el estado",
+          message: t("automations.no_se_pudo_actualizar_el_estado"),
           color: "red",
         });
       }
@@ -337,14 +337,14 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
     try {
       await deleteAutomationMutation.mutateAsync(automationId);
       notifications.show({
-        title: "Automatización eliminada",
-        message: "La automatización se ha eliminado correctamente",
+        title: t("automations.automatizacion_eliminada"),
+        message: t("automations.la_automatizacion_se_ha_eliminado_correctamente"),
         color: "green",
       });
     } catch (error) {
       notifications.show({
         title: "Error",
-        message: "No se pudo eliminar la automatización",
+        message: t("automations.no_se_pudo_eliminar_la_automatizacion"),
         color: "red",
       });
     }

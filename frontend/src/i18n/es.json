@@ -231,30 +231,30 @@
     "confirmPasswordPlaceholder": "Repite tu contraseña",
     "updatePassword": "Actualizar contraseña",
     "nombreCompleto": "Nombre completo",
-    "contraseA": "ContraseÃ±a",
-    "confirmarContraseA": "Confirmar contraseÃ±a",
+    "contraseA": "Contraseña",
+    "confirmarContraseA": "Confirmar contraseña",
     "tuNombreYApellidos": "Tu nombre y apellidos",
-    "mNimo8Caracteres": "MÃ­nimo 8 caracteres",
-    "repiteTuContraseA": "Repite tu contraseÃ±a",
+    "mNimo8Caracteres": "Mínimo 8 caracteres",
+    "repiteTuContraseA": "Repite tu contraseña",
     "error": "Error",
-    "verificandoInvitaciN": "Verificando invitaciÃ³n...",
-    "invitaciNInvLida": "InvitaciÃ³n invÃ¡lida",
-    "irAIniciarSesiN": "Ir a Iniciar SesiÃ³n",
+    "verificandoInvitaciN": "Verificando invitación...",
+    "invitaciNInvLida": "Invitación inválida",
+    "irAIniciarSesiN": "Ir a Iniciar Sesión",
     "activarMiCuenta": "Activar mi cuenta",
-    "tuCuentaHaSidoCreada": "Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesiÃ³n.",
-    "iniciarSesiN": "Iniciar sesiÃ³n",
+    "tuCuentaHaSidoCreada": "Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesión.",
+    "iniciarSesiN": "Iniciar sesión",
     "tuEmailCom": "tu@email.com",
     "emailConfirmado": "Â¡Email confirmado!",
     "tuCuentaHaSidoVerificada": "Tu cuenta ha sido verificada correctamente.",
-    "porFavorIntroduceUnEmail": "Por favor, introduce un email vÃ¡lido",
+    "porFavorIntroduceUnEmail": "Por favor, introduce un email válido",
     "emailEnviado": "Email enviado",
     "white": "white",
     "trackfiz": "Trackfiz",
     "verificandoTuEmail": "Verificando tu email...",
     "noSePudoVerificar": "No se pudo verificar",
     "enviarNuevoEnlace": "Enviar nuevo enlace",
-    "volverAlInicioDeSesi": "Volver al inicio de sesiÃ³n",
-    "hemosEnviadoUnNuevoEnlace": "Hemos enviado un nuevo enlace de verificaciÃ³n a tu email. \r\n                Revisa tu bandeja de entrada (y la carpeta de spam).",
+    "volverAlInicioDeSesi": "Volver al inicio de sesión",
+    "hemosEnviadoUnNuevoEnlace": "Hemos enviado un nuevo enlace de verificación a tu email. \r\n                Revisa tu bandeja de entrada (y la carpeta de spam).",
     "1a1a2e": "#1a1a2e",
     "hasSidoInvitadoA": "Has sido invitado a"
   },
@@ -900,7 +900,11 @@
     "exportar": "Exportar",
     "eliminaPermanentementeTuCuentaY": "Elimina permanentemente tu cuenta y todos los datos",
     "estaAccionEsIrreversibleTu": "Esta acción es irreversible. Tu cuenta y todos los datos asociados serán eliminados permanentemente tras un periodo de gracia de 30 días.",
-    "cancelar": "Cancelar"
+    "cancelar": "Cancelar",
+    "tu_disponibilidad_semanal_ha_sido_actualizada": "Tu disponibilidad semanal ha sido actualizada",
+    "no_se_pudo_guardar": "No se pudo guardar",
+    "publicos": "públicos",
+    "notifica_por_email": "= Notifica por email"
   },
   "days": {
     "monday": "Lunes",
@@ -1056,7 +1060,8 @@
     "ninguno": "Ninguno",
     "arrastraArchivosAqui": "Arrastra archivos aquí",
     "seleccionarArchivo": "Seleccionar Archivo",
-    "subir": "Subir"
+    "subir": "Subir",
+    "no_hay_productos_activos": "No hay productos activos"
   },
   "errors": {
     "notAuthenticated": "No autenticado",
@@ -1169,7 +1174,16 @@
     "nombre": "Nombre",
     "anterior": "Anterior",
     "cancelar": "Cancelar",
-    "siguiente": "Siguiente"
+    "siguiente": "Siguiente",
+    "automatizacion_actualizada": "Automatización actualizada",
+    "la_automatizacion_se_ha_actualizado_correctamente": "La automatización se ha actualizado correctamente",
+    "automatizacion_creada": "Automatización creada",
+    "la_automatizacion_se_ha_creado_correctamente": "La automatización se ha creado correctamente",
+    "no_se_pudo_guardar_la_automatizacion": "No se pudo guardar la automatización",
+    "no_se_pudo_actualizar_el_estado": "No se pudo actualizar el estado",
+    "automatizacion_eliminada": "Automatización eliminada",
+    "la_automatizacion_se_ha_eliminado_correctamente": "La automatización se ha eliminado correctamente",
+    "no_se_pudo_eliminar_la_automatizacion": "No se pudo eliminar la automatización"
   },
   "boxes": {
     "nombre": "Nombre",
@@ -1644,7 +1658,9 @@
     "paraPersonaFisicaSeFactura": "Para Persona Física se factura con tu nombre y apellidos.",
     "guardarDatosDeFacturacion": "Guardar datos de facturación",
     "cambiaTuContrasenaCadaCierto": "Cambia tu contraseña cada cierto tiempo para mantener tu cuenta\r\n              segura.",
-    "tuCentroDeEntrenamiento": "Tu centro de entrenamiento"
+    "tuCentroDeEntrenamiento": "Tu centro de entrenamiento",
+    "entrenamientos_y_nutricion": "Entrenamientos y nutrición",
+    "pagos_y_facturas": "Pagos y facturas"
   },
   "myProgress": {
     "fecha": "Fecha",
@@ -2110,7 +2126,17 @@
     "cerrar": "Cerrar",
     "exportarPdf": "Exportar PDF",
     "anadirLesion": "Añadir lesión",
-    "respondeLasSiguientesPreguntasSobre": "Responde las siguientes preguntas sobre la aptitud física del cliente."
+    "respondeLasSiguientesPreguntasSobre": "Responde las siguientes preguntas sobre la aptitud física del cliente.",
+    "condicion_cardiaca_reportada": "✓ Condición cardíaca reportada",
+    "dolor_en_el_pecho_al_hacer_actividad_fisica": "✓ Dolor en el pecho al hacer actividad física",
+    "mareos_o_perdida_de_conocimiento": "✓ Mareos o pérdida de conocimiento",
+    "problemas_oseos_o_articulares": "✓ Problemas óseos o articulares",
+    "medicamentos_para_presion_arterial_corazon": "✓ Medicamentos para presión arterial/corazón",
+    "otra_razon_para_no_hacer_ejercicio": "✓ Otra razón para no hacer ejercicio",
+    "sin_riesgos_identificados_en_par_q": "✓ Sin riesgos identificados en PAR-Q",
+    "foto_de_progreso": "Foto de progreso",
+    "grasa_corporal": "% Grasa Corporal",
+    "grasa": "% Grasa"
   },
   "clients": {
     "emailEnviado": "Email enviado",
@@ -2237,7 +2263,10 @@
     "enviaUnaInvitacionPorEmail": "Envía una invitación por email para que el cliente complete su registro \r\n                con toda la información que necesitas (datos personales, objetivos, salud, etc.)",
     "enviarInvitacion": "Enviar Invitación",
     "estaAccionNoSePuede": "Esta acción no se puede deshacer. Se borrarán todos los datos del cliente.",
-    "podrasRestaurarloDesdeLaPestana": "Podrás restaurarlo desde la pestaña Eliminados. Para borrarlo del todo, elimínalo otra vez desde ahí."
+    "podrasRestaurarloDesdeLaPestana": "Podrás restaurarlo desde la pestaña Eliminados. Para borrarlo del todo, elimínalo otra vez desde ahí.",
+    "si": "Sí",
+    "no": "No",
+    "buscar_por_nombre_email_o_telefono": "Buscar por nombre, email o teléfono..."
   },
   "community": {
     "titulo": "Título",
@@ -2461,7 +2490,9 @@
     "ingresosDelMes": "Ingresos del Mes",
     "noHayClases": "No hay clases",
     "noSeEncontraronClasesCon": "No se encontraron clases con los filtros seleccionados",
-    "crearPrimeraClase": "Crear Primera Clase"
+    "crearPrimeraClase": "Crear Primera Clase",
+    "clase_creada": "Clase creada",
+    "la_clase_se_ha_programado_correctamente": "La clase se ha programado correctamente"
   },
   "lms": {
     "academiaLms": "Academia / LMS",
@@ -2535,7 +2566,9 @@
     "cargando": "Cargando...",
     "noTienesFormulariosPendientes": "No tienes formularios pendientes",
     "cuandoTuEntrenadorTeEnvie": "Cuando tu entrenador te envíe uno lo verás aquí.",
-    "todaviaNoHayFormulariosCompletados": "Todavía no hay formularios completados"
+    "todaviaNoHayFormulariosCompletados": "Todavía no hay formularios completados",
+    "tu_respuesta_se_ha_registrado_correctamente": "Tu respuesta se ha registrado correctamente.",
+    "no_se_pudo_enviar_el_formulario_intentalo_de_nuevo": "No se pudo enviar el formulario. Inténtalo de nuevo."
   },
   "nutrition": {
     "verDetalle": "Ver detalle",
@@ -3290,7 +3323,8 @@
     "enviarAAeatPruebas": "Enviar a AEAT Pruebas",
     "hashSha256": "Hash SHA-256:",
     "respuestaAeat": "Respuesta AEAT:",
-    "guardarConfiguracion": "Guardar Configuración"
+    "guardarConfiguracion": "Guardar Configuración",
+    "vs_mes_anterior": "vs mes anterior"
   },
   "catalog": {
     "editar": "Editar",
@@ -3619,7 +3653,8 @@
     "enviarAAeatPruebas": "Enviar a AEAT Pruebas",
     "hashSha256": "Hash SHA-256:",
     "respuestaAeat": "Respuesta AEAT:",
-    "guardarConfiguracion": "Guardar Configuración"
+    "guardarConfiguracion": "Guardar Configuración",
+    "vs_mes_anterior": "vs mes anterior"
   },
   "reports": {
     "reportesYAnalytics": "Reportes y Analytics",
@@ -3751,7 +3786,8 @@
     "reduceStock": "Reduce stock",
     "cerrar": "Cerrar",
     "cant": "Cant.",
-    "registrar": "Registrar"
+    "registrar": "Registrar",
+    "no_hay_proveedores_activos": "No hay proveedores activos"
   },
   "suggestions": {
     "titulo": "Título",
@@ -3786,7 +3822,10 @@
     "enviar": "Enviar",
     "por": "Por",
     "sinSugerenciasTodavia": "Sin sugerencias todavía",
-    "seElPrimeroEnProponer": "Sé el primero en proponer una idea para mejorar la plataforma"
+    "seElPrimeroEnProponer": "Sé el primero en proponer una idea para mejorar la plataforma",
+    "anadir_temporizador_de_descanso_entre_series": "Añadir temporizador de descanso entre series",
+    "integracion_con_apple_health_google_fit": "Integración con Apple Health / Google Fit",
+    "comparar_progreso_de_fotos_mes_a_mes": "Comparar progreso de fotos mes a mes"
   },
   "supplements": {
     "suplementacion": "Suplementación",
@@ -3857,7 +3896,8 @@
     "noHayCuentasBancariasRegistradas": "No hay cuentas bancarias registradas.",
     "datosDeContacto": "Datos de contacto",
     "otros": "Otros",
-    "cancelar": "Cancelar"
+    "cancelar": "Cancelar",
+    "buscar_por_nombre_nif_email": "Buscar por nombre, NIF, email..."
   },
   "tasks": {
     "titulo": "Título",
@@ -4265,8 +4305,8 @@
     "trackfiz": "Trackfiz",
     "menuPrincipal": "Menu Principal",
     "miCuenta": "Mi Cuenta",
-    "configuraciN": "ConfiguraciÃ³n",
-    "cerrarSesiN": "Cerrar sesiÃ³n"
+    "configuraciN": "Configuración",
+    "cerrarSesiN": "Cerrar sesión"
   },
   "notifications": {
     "nuevo": "Nuevo",
@@ -4516,7 +4556,9 @@
     "losSuplementosSePuedenAnadir": "Los suplementos se pueden añadir desde la pestaña de alimentos buscando por nombre.",
     "resumenNutricional": "Resumen nutricional",
     "totalRecetaCompleta": "Total (receta completa)",
-    "cancelar": "Cancelar"
+    "cancelar": "Cancelar",
+    "receta_duplicada": "Receta duplicada",
+    "receta_eliminada": "Receta eliminada"
   },
   "supplementsComp": {
     "nombre": "Nombre",
@@ -4736,5 +4778,44 @@
     "myMessagesDesc": "Chat con tu entrenador",
     "myDocumentsDesc": "Documentos compartidos",
     "myProfileDesc": "Datos personales y preferencias"
+  },
+  "clientForms": {
+    "no_se_pudo_enviar_el_formulario": "No se pudo enviar el formulario"
+  },
+  "clientReports": {
+    "el_reporte_se_ha_guardado_correctamente": "El reporte se ha guardado correctamente",
+    "los_cambios_se_han_guardado": "Los cambios se han guardado",
+    "el_reporte_ha_sido_eliminado": "El reporte ha sido eliminado"
+  },
+  "dashboardLayout": {
+    "anadir_a_pantalla_de_inicio": "\"Añadir a pantalla de inicio\""
+  },
+  "mealPlanBuilder": {
+    "alimento_creado": "Alimento creado",
+    "el_alimento_ha_sido_creado_correctamente": "El alimento ha sido creado correctamente",
+    "receta_anadida": "Receta añadida"
+  },
+  "mealPlanDetailView": {
+    "el_pdf_se_esta_generando": "El PDF se está generando...",
+    "1_multivitaminico": "1 Multivitamínico",
+    "comida": "COMIDA",
+    "sin_alimentos": "(sin alimentos)"
+  },
+  "nutritionHistory": {
+    "grasa": "% Grasa"
+  },
+  "workoutBuilder": {
+    "dia_de_descanso": "🛌 Día de descanso"
+  },
+  "acceptStaffInvite": {
+    "asnete_al_equipo": "Ãšnete al equipo"
+  },
+  "timeClock": {
+    "7_dias": "7 días",
+    "30_dias": "30 días"
+  },
+  "exerciseForm": {
+    "alternativa_anadida": "Alternativa añadida",
+    "la_imagen_no_puede_superar_los_8_mb": "La imagen no puede superar los 8 MB"
   }
 }

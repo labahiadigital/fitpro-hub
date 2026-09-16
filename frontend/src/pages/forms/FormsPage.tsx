@@ -1490,7 +1490,7 @@ export function FormsPage() {
                     data={productOptions}
                     searchable
                     clearable
-                    nothingFoundMessage="No hay productos activos"
+                    nothingFoundMessage={t("forms.no_hay_productos_activos")}
                     {...form.getInputProps("product_ids")}
                   />
                 )}

@@ -3276,17 +3276,17 @@ export function ClientDetailPage() {
                 return (
                   <Stack gap="xs">
                     {isYes(parqResponses.heartCondition) && (
-                      <Text size="sm" c="orange">✓ Condición cardíaca reportada</Text>
+                      <Text size="sm" c="orange">{t("clientDetail.condicion_cardiaca_reportada")}</Text>
                     )}
                     {isYes(parqResponses.chestPain) && (
-                      <Text size="sm" c="orange">✓ Dolor en el pecho al hacer actividad física</Text>
+                      <Text size="sm" c="orange">{t("clientDetail.dolor_en_el_pecho_al_hacer_actividad_fisica")}</Text>
                     )}
                     {isYes(parqResponses.dizziness) && (
-                      <Text size="sm" c="orange">✓ Mareos o pérdida de conocimiento</Text>
+                      <Text size="sm" c="orange">{t("clientDetail.mareos_o_perdida_de_conocimiento")}</Text>
                     )}
                     {isYes(parqResponses.boneJoint) && (
                       <>
-                        <Text size="sm" c="orange">✓ Problemas óseos o articulares</Text>
+                        <Text size="sm" c="orange">{t("clientDetail.problemas_oseos_o_articulares")}</Text>
                         {parqResponses.boneJointDetails && (
                           <Text size="xs" c="dimmed" ml="md">
                             Detalle: {parqResponses.boneJointDetails}
@@ -3295,11 +3295,11 @@ export function ClientDetailPage() {
                       </>
                     )}
                     {isYes(parqResponses.bloodPressure) && (
-                      <Text size="sm" c="orange">✓ Medicamentos para presión arterial/corazón</Text>
+                      <Text size="sm" c="orange">{t("clientDetail.medicamentos_para_presion_arterial_corazon")}</Text>
                     )}
                     {isYes(parqResponses.otherReason) && (
                       <>
-                        <Text size="sm" c="orange">✓ Otra razón para no hacer ejercicio</Text>
+                        <Text size="sm" c="orange">{t("clientDetail.otra_razon_para_no_hacer_ejercicio")}</Text>
                         {parqResponses.otherReasonDetails && (
                           <Text size="xs" c="dimmed" ml="md">
                             Detalle: {parqResponses.otherReasonDetails}
@@ -3308,7 +3308,7 @@ export function ClientDetailPage() {
                       </>
                     )}
                     {!hasRisks && (
-                      <Text size="sm" c="green">✓ Sin riesgos identificados en PAR-Q</Text>
+                      <Text size="sm" c="green">{t("clientDetail.sin_riesgos_identificados_en_par_q")}</Text>
                     )}
                   </Stack>
                 );
@@ -4227,7 +4227,7 @@ export function ClientDetailPage() {
                               <Image
                                 src={photo.photo_url}
                                 height={200}
-                                alt="Foto de progreso"
+                                alt={t("clientDetail.foto_de_progreso")}
                                 fallbackSrc="https://placehold.co/300x200?text=Foto"
                               />
                             </Card.Section>
@@ -4319,7 +4319,7 @@ export function ClientDetailPage() {
                 </Box>
                 <Box className="nv-card" p="lg">
                   <Group justify="space-between" mb="xs">
-                    <Text size="sm" c="dimmed">% Grasa Corporal</Text>
+                    <Text size="sm" c="dimmed">{t("clientDetail.grasa_corporal")}</Text>
                     <ThemeIcon size="sm" variant="light" color="orange">
                       <IconActivity size={14} />
                     </ThemeIcon>
@@ -4438,7 +4438,7 @@ export function ClientDetailPage() {
                       <Table.Tr>
                         <Table.Th>{t("clientDetail.fecha")}</Table.Th>
                         <Table.Th>{t("clientDetail.pesoKg")}</Table.Th>
-                        <Table.Th>% Grasa</Table.Th>
+                        <Table.Th>{t("clientDetail.grasa")}</Table.Th>
                         <Table.Th>{t("clientDetail.masaMuscularKg")}</Table.Th>
                         <Table.Th>{t("clientDetail.medidas")}</Table.Th>
                         <Table.Th>{t("clientDetail.variacion")}</Table.Th>

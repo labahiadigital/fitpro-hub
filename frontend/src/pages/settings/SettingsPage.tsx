@@ -159,10 +159,10 @@ function WeeklyScheduleSection({
     },
     onSuccess: (res) => {
       setWorkspace(res.data);
-      notifications.show({ title: "Horario guardado", message: "Tu disponibilidad semanal ha sido actualizada", color: "green" });
+      notifications.show({ title: "Horario guardado", message: t("settings.tu_disponibilidad_semanal_ha_sido_actualizada"), color: "green" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo guardar", color: "red" });
+      notifications.show({ title: "Error", message: t("settings.no_se_pudo_guardar"), color: "red" });
     },
   });
 
@@ -920,7 +920,7 @@ export function SettingsPage() {
                   />
                   <Alert color="blue" variant="light" radius="md">
                     <Text size="sm">
-                      {t("settings.estosDatosSon")} <b>públicos</b>: aparecerán en la pantalla
+                      {t("settings.estosDatosSon")} <b>{t("settings.publicos")}</b>: aparecerán en la pantalla
                       que ven los clientes tras pagar, en los emails que les
                       enviamos y en sus avisos cuando tengan algún problema.
                     </Text>
@@ -1405,7 +1405,7 @@ export function SettingsPage() {
               <Divider my="lg" />
 
               <Group justify="center" gap="xl">
-                <Group gap="xs"><IconMail size={14} color="var(--mantine-color-dimmed)" /><Text size="xs" c="dimmed">= Notifica por email</Text></Group>
+                <Group gap="xs"><IconMail size={14} color="var(--mantine-color-dimmed)" /><Text size="xs" c="dimmed">{t("settings.notifica_por_email")}</Text></Group>
                 <Group gap="xs"><IconBell size={14} color="var(--mantine-color-dimmed)" /><Text size="xs" c="dimmed">= Notifica en app/web</Text></Group>
               </Group>
             </Box>

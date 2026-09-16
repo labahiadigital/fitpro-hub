@@ -26,6 +26,7 @@ import type { Recipe } from "../../../types/recipe";
 import { RECIPE_CATEGORIES, RECIPE_DIFFICULTIES } from "../../../types/recipe";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { RectificationButton } from "../../../components/common/RectificationButton";
+import { useTranslation } from "react-i18next";
 
 interface RecipesTabProps {
   recipes: Recipe[];
@@ -62,6 +63,7 @@ export function RecipesTab({
   duplicatePending,
   deletePending,
 }: RecipesTabProps) {
+  const { t } = useTranslation();
   const hasFilters = !!(recipeSearch || recipeCategoryFilter || recipeDifficultyFilter);
 
   return (
@@ -198,7 +200,7 @@ export function RecipesTab({
                       loading={duplicatePending}
                       onClick={async () => {
                         await onDuplicate(recipe);
-                        notifications.show({ title: "Receta duplicada", message: `${recipe.name} (copia)`, color: "teal" });
+                        notifications.show({ title: t("recipes.receta_duplicada"), message: `${recipe.name} (copia)`, color: "teal" });
                       }}
                     >
                       <IconCopy size={14} />
@@ -211,7 +213,7 @@ export function RecipesTab({
                         loading={deletePending}
                         onClick={async () => {
                           await onDelete(recipe);
-                          notifications.show({ title: "Receta eliminada", message: recipe.name, color: "green" });
+                          notifications.show({ title: t("recipes.receta_eliminada"), message: recipe.name, color: "green" });
                         }}
                         variant="light"
                         radius="md"

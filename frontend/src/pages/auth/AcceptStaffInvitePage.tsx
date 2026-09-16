@@ -157,7 +157,7 @@ export function AcceptStaffInvitePage() {
                 >
                   <IconUserPlus size={30} />
                 </ThemeIcon>
-                <Title order={3}>Ãšnete al equipo</Title>
+                <Title order={3}>{t("acceptStaffInvite.asnete_al_equipo")}</Title>
                 <Text c="dimmed" size="sm" mt={4}>
                   Has sido invitado a{" "}
                   <Text span fw={600} c="teal">

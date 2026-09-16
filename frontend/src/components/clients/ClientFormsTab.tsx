@@ -133,7 +133,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
     } catch {
       notifications.show({
         title: "Error",
-        message: "No se pudo enviar el formulario",
+        message: t("clientForms.no_se_pudo_enviar_el_formulario"),
         color: "red",
       });
     }

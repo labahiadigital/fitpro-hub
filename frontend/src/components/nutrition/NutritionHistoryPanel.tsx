@@ -18,6 +18,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import type { NutritionCalculationEntry } from "../../hooks/useClients";
+import { useTranslation } from "react-i18next";
 
 interface NutritionHistoryPanelProps {
   history: NutritionCalculationEntry[];
@@ -64,6 +65,7 @@ export function NutritionHistoryPanel({
   onClear,
   isClearing,
 }: NutritionHistoryPanelProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   // Ordenar de más reciente a más antigua
@@ -134,7 +136,7 @@ export function NutritionHistoryPanel({
                     <Table.Tr>
                       <Table.Th>{"Fecha"}</Table.Th>
                       <Table.Th>{"Peso"}</Table.Th>
-                      <Table.Th>% Grasa</Table.Th>
+                      <Table.Th>{t("nutritionHistory.grasa")}</Table.Th>
                       <Table.Th>{"Actividad"}</Table.Th>
                       <Table.Th>{"Objetivo"}</Table.Th>
                       <Table.Th>{"Fórmula"}</Table.Th>

@@ -636,7 +636,7 @@ export function StockPage() {
               data={supplierOptions}
               searchable
               clearable
-              nothingFoundMessage="No hay proveedores activos"
+              nothingFoundMessage={t("stock.no_hay_proveedores_activos")}
               value={itemForm.values.supplier_id}
               onChange={(val) => itemForm.setFieldValue("supplier_id", val)}
             />

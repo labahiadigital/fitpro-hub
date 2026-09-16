@@ -20,6 +20,7 @@ import { notifications } from "@mantine/notifications";
 import { IconEdit, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clientsApi } from "../../services/api";
+import { useTranslation } from "react-i18next";
 
 interface ClientReport {
   id: string;
@@ -37,6 +38,7 @@ interface Props {
 }
 
 export function ClientReportsTab({ clientId }: Props) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [opened, { open, close }] = useDisclosure(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -66,7 +68,7 @@ export function ClientReportsTab({ clientId }: Props) {
       clientsApi.createReport(clientId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-reports", clientId] });
-      notifications.show({ title: "Reporte creado", message: "El reporte se ha guardado correctamente", color: "green" });
+      notifications.show({ title: "Reporte creado", message: t("clientReports.el_reporte_se_ha_guardado_correctamente"), color: "green" });
       close();
       form.reset();
     },
@@ -77,7 +79,7 @@ export function ClientReportsTab({ clientId }: Props) {
       clientsApi.updateReport(clientId, reportId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-reports", clientId] });
-      notifications.show({ title: "Reporte actualizado", message: "Los cambios se han guardado", color: "green" });
+      notifications.show({ title: "Reporte actualizado", message: t("clientReports.los_cambios_se_han_guardado"), color: "green" });
       close();
       form.reset();
       setEditId(null);
@@ -88,7 +90,7 @@ export function ClientReportsTab({ clientId }: Props) {
     mutationFn: (reportId: string) => clientsApi.deleteReport(clientId, reportId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-reports", clientId] });
-      notifications.show({ title: "Reporte eliminado", message: "El reporte ha sido eliminado", color: "blue" });
+      notifications.show({ title: "Reporte eliminado", message: t("clientReports.el_reporte_ha_sido_eliminado"), color: "blue" });
     },
   });
 

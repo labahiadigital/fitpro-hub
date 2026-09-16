@@ -353,6 +353,7 @@ function CreateClassModal({
   opened: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const form = useForm({
     initialValues: {
       title: "",
@@ -372,8 +373,8 @@ function CreateClassModal({
   const handleSubmit = async (_values: typeof form.values) => {
     // TODO: Implementar creación de clase
     notifications.show({
-      title: "Clase creada",
-      message: "La clase se ha programado correctamente",
+      title: t("liveClasses.clase_creada"),
+      message: t("liveClasses.la_clase_se_ha_programado_correctamente"),
       color: "green",
     });
     onClose();

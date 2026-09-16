@@ -1039,7 +1039,7 @@ export function DashboardLayout() {
               <IconSquarePlus size={16} color="var(--mantine-color-blue-6)" />
             </Box>
             <Text size="sm" style={{ flex: 1 }}>
-              {t("layout.selecciona")} <b>"Añadir a pantalla de inicio"</b>
+              {t("layout.selecciona")} <b>{t("dashboardLayout.anadir_a_pantalla_de_inicio")}</b>
             </Text>
           </Group>
           <Button onClick={dismissIOSGuide} variant="light" fullWidth radius="md">

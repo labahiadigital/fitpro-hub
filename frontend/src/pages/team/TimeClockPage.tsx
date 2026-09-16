@@ -399,8 +399,8 @@ function RecordsTab() {
     <Stack gap="md">
       <Group justify="space-between">
         <Group gap="xs">
-          <Button size="xs" variant="light" onClick={() => setQuickFilter(7)}>7 días</Button>
-          <Button size="xs" variant="light" onClick={() => setQuickFilter(30)}>30 días</Button>
+          <Button size="xs" variant="light" onClick={() => setQuickFilter(7)}>{t("timeClock.7_dias")}</Button>
+          <Button size="xs" variant="light" onClick={() => setQuickFilter(30)}>{t("timeClock.30_dias")}</Button>
           <Button size="xs" variant="light" onClick={() => setQuickFilter(90)}>3 meses</Button>
           <Button size="xs" variant="light" onClick={() => {
             const now = new Date();

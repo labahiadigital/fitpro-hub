@@ -758,7 +758,7 @@ export function PaymentsPage() {
                 <Badge size="sm" variant="light" color="green" radius="xl">
                   +{kpis.mrrChange}%
                 </Badge>
-                <Text size="xs" c="dimmed">vs mes anterior</Text>
+                <Text size="xs" c="dimmed">{t("payments.vs_mes_anterior")}</Text>
               </Group>
             </Box>
             <ThemeIcon size={48} radius="xl" style={{ backgroundColor: "var(--nv-success-bg)", color: "var(--nv-success)" }}>
@@ -777,7 +777,7 @@ export function PaymentsPage() {
                 <Badge size="sm" variant="light" color="blue" radius="xl">
                   +{kpis.revenueChange}%
                 </Badge>
-                <Text size="xs" c="dimmed">vs mes anterior</Text>
+                <Text size="xs" c="dimmed">{t("payments.vs_mes_anterior")}</Text>
               </Group>
             </Box>
             <ThemeIcon size={48} radius="xl" style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}>
