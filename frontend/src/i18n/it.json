@@ -123,7 +123,18 @@
     "quitarFavoritos": "Rimuovi dai preferiti",
     "anadirFavoritos": "Aggiungi ai preferiti",
     "requerido": "Richiesto",
-    "cargando": "Caricamento…"
+    "cargando": "Caricamento…",
+    "guardarCambios": "Salva modifiche",
+    "sinObjetivos": "Senza obiettivi",
+    "sinNombre": "Senza nome",
+    "sinDescripcion": "Senza descrizione",
+    "vsMesAnterior": "Vs mese precedente",
+    "todos": "Tutti",
+    "hombre": "Uomo",
+    "mujer": "Donna",
+    "masculino": "Maschile",
+    "femenino": "Femminile",
+    "otroGenero": "Altro"
   },
   "nav": {
     "mainMenu": "Menu Principale",
@@ -311,7 +322,12 @@
     "iniciaSesionParaAcceder": "Accedi per entrare.",
     "conectandoGoogleCalendar": "Connessione con Google Calendar...",
     "verificandoAutorizacion": "Verifica dell'autorizzazione...",
-    "conectadoCorrectamente": "Connesso correttamente!"
+    "conectadoCorrectamente": "Connesso correttamente!",
+    "introduceContrasena": "Inserisci una password",
+    "minimo8Caracteres": "Minimo 8 caratteri",
+    "alMenosUnaMayuscula": "Almeno una lettera maiuscola (A-Z)",
+    "alMenosUnaMinuscula": "Almeno una lettera minuscola (a-z)",
+    "alMenosUnNumero": "Almeno un numero (0-9)"
   },
   "dashboard": {
     "title": "Pannello Principale",
@@ -425,7 +441,12 @@
     "esteMes": "Questo mese",
     "segmentosDeClientes": "Segmenti di clienti",
     "crecimientoDeIngresos": "Crescita dei ricavi",
-    "sesionesEsteMes": "Sessioni questo mese"
+    "sesionesEsteMes": "Sessioni questo mese",
+    "ingresosMes": "Entrate mese",
+    "sesionesPendientes": "Sessioni in Sospeso",
+    "ingresosRecurrentesMRR": "Entrate Ricorrenti (MRR)",
+    "ingresoPorClienteARPA": "Entrate per Cliente (ARPA)",
+    "tasaAbandono": "Tasso di Abbandono"
   },
   "settings": {
     "title": "Impostazioni",
@@ -968,7 +989,8 @@
     "horarioDeDisponibilidad": "Orario di disponibilità",
     "configuraLosHorarios": "Configura gli orari in cui i tuoi clienti possono richiedere appuntamenti.",
     "noDisponible": "Non disponibile",
-    "debeSerDiferente": "Deve essere diverso"
+    "debeSerDiferente": "Deve essere diverso",
+    "horarioGuardado": "Orario salvato"
   },
   "days": {
     "monday": "Lunedì",
@@ -1125,7 +1147,9 @@
     "arrastraArchivosAqui": "[IT] Arrastra archivos aquí",
     "seleccionarArchivo": "Seleccionar File",
     "subir": "Carica",
-    "no_hay_productos_activos": "Non ci sono prodotti attivi"
+    "no_hay_productos_activos": "Non ci sono prodotti attivi",
+    "formularioObligatorio": "Modulo obbligatorio",
+    "formularioOpcional": "Modulo facoltativo"
   },
   "errors": {
     "notAuthenticated": "Non autenticato",
@@ -1138,7 +1162,11 @@
     "couldNotUpload": "Impossibile caricare la foto",
     "pageNotFound": "Pagina non trovata",
     "pageNotFoundDesc": "La pagina che stai cercando non esiste o è stata spostata.",
-    "backToHome": "Torna alla home"
+    "backToHome": "Torna alla home",
+    "nuevaVersionDisponible": "Nuova versione disponibile",
+    "algoSalioMal": "Qualcosa è andato storto",
+    "recargarPagina": "Ricarica pagina",
+    "reintentar": "Riprova"
   },
   "status": {
     "active": "Attivo",
@@ -1249,7 +1277,9 @@
     "la_automatizacion_se_ha_eliminado_correctamente": "L'automazione è stata eliminata correttamente",
     "no_se_pudo_eliminar_la_automatizacion": "Impossibile eliminare l'automazione",
     "ejOnboarding": "Es.: Onboarding nuovi clienti",
-    "seleccionaUnDisparador": "Seleziona un trigger"
+    "seleccionaUnDisparador": "Seleziona un trigger",
+    "recordatorioReserva": "Promemoria prenotazione",
+    "recordatorioPago": "Promemoria pagamento"
   },
   "boxes": {
     "nombre": "Nome",
@@ -1752,7 +1782,30 @@
     "cambiaTuContrasenaCadaCierto": "Cambia tu Password cada cierto tiempo para mantener tu cuenta\r\n              segura.",
     "tuCentroDeEntrenamiento": "Tu centro de Allenamento",
     "entrenamientos_y_nutricion": "Allenamenti e nutrizione",
-    "pagos_y_facturas": "Pagamenti e fatture"
+    "pagos_y_facturas": "Pagamenti e fatture",
+    "cuandoSeTeAgendaSesion": "Quando ti viene programmata una nuova sessione",
+    "cuandoAlcancesObjetivo": "Quando raggiungi un obiettivo importante",
+    "resumenComparativo": "Riepilogo comparativo tra settimane",
+    "confirmacionPago": "Conferma dell'elaborazione di un pagamento",
+    "formulariosDebesCompletar": "Moduli da compilare",
+    "consentimientosLegales": "Consensi legali in sospeso",
+    "pagoDeSuscripcion": "Pagamento abbonamento",
+    "confirmacionRegistrarProgreso": "Conferma alla registrazione dei progressi",
+    "recordatorioComidas": "Promemoria pasti",
+    "recuerdaRegistrarComidas": "Ricorda di registrare i tuoi pasti",
+    "recordatorioEntreno": "Promemoria allenamento",
+    "recuerdaRealizarEntreno": "Ricorda di fare il tuo allenamento",
+    "alertaSuplementos": "Avviso integratori",
+    "alertasComidasSuplementos": "Avvisi su pasti o integratori",
+    "pausadaGray": "In pausa",
+    "cuandoSeCancelaCita": "Quando viene annullato un tuo appuntamento",
+    "cuandoSeModificaCita": "Quando viene modificato un appuntamento esistente",
+    "recordatorioAntesCitas": "Promemoria prima dei tuoi appuntamenti",
+    "cuandoSeActualizaPlan": "Quando viene aggiornata la tua routine o piano",
+    "cuandoSeGeneraFactura": "Quando viene generata una fattura",
+    "cuandoEntrenadorEnviaMensaje": "Quando il tuo allenatore ti invia un messaggio",
+    "ofertasYPromociones": "Offerte e promozioni del tuo centro",
+    "encuestasDeSatisfaccion": "Sondaggi di soddisfazione in sospeso"
   },
   "myProgress": {
     "fecha": "Data",
@@ -1819,7 +1872,9 @@
     "editandoMedidas": "Modifica misure esistenti",
     "anadeFotoEvolucion": "Aggiungi una foto per confrontare la tua evoluzione",
     "subirFotoProgreso": "Carica Foto Progresso",
-    "fotosEvolucion": "Foto Evoluzione ({{count}} foto)"
+    "fotosEvolucion": "Foto Evoluzione ({{count}} foto)",
+    "seleccionarImagen": "Seleziona immagine",
+    "vistaPrevia": "Anteprima"
   },
   "myWorkouts": {
     "duracionMin": "Durata (min)",
@@ -1890,7 +1945,8 @@
     "esfuerzo": "Sforzo (1-10)",
     "ejLesion": "Es.: Infortunio, macchina non disponibile...",
     "ejerciciosDe": "Esercizi di {{day}}",
-    "noHayEjerciciosEn": "Non ci sono esercizi in {{day}}"
+    "noHayEjerciciosEn": "Non ci sono esercizi in {{day}}",
+    "sinGrupo": "Senza gruppo"
   },
   "clientDetail": {
     "tipoDeCliente": "Tipo de Cliente",
@@ -2248,7 +2304,11 @@
     "agendaLaPrimera": "Prenota la prima",
     "sinPagosRegistrados": "Nessun pagamento registrato",
     "noHayFotos": "Nessuna foto",
-    "deTipo": "di tipo"
+    "deTipo": "di tipo",
+    "nombreFiscal": "Nome fiscale",
+    "sinFecha": "Senza data",
+    "sesionDeEntrenamiento": "Sessione di allenamento",
+    "pendienteLabel": "In sospeso"
   },
   "clients": {
     "emailEnviado": "Email inviata",
@@ -2388,7 +2448,11 @@
     "clienteEliminadoDef": "Cliente eliminato definitivamente",
     "clienteMovidoEliminados": "Cliente spostato nel Cestino",
     "noHayClientes": "Nessun cliente",
-    "seleccionaPlantilla": "Seleziona un modello"
+    "seleccionaPlantilla": "Seleziona un modello",
+    "sinTelefono": "Senza telefono",
+    "reboteLeve": "Rimbalzo leggero",
+    "reboteFuerte": "Rimbalzo forte",
+    "reenviarInvitacion": "Reinvia invito"
   },
   "community": {
     "titulo": "[IT] Título",
@@ -2548,7 +2612,11 @@
     "estado": "Stato",
     "activa": "Attiva",
     "inactiva": "Inattiva",
-    "cancelar": "Annulla"
+    "cancelar": "Annulla",
+    "asuntoRequerido": "Oggetto richiesto",
+    "cuerpoRequerido": "Corpo richiesto",
+    "editarPlantilla": "Modifica modello",
+    "crearPlantilla": "Crea modello"
   },
   "liveClasses": {
     "tituloDeLaClase": "Título de la Lezione",
@@ -2615,7 +2683,11 @@
     "crearPrimeraClase": "Crea Primera Lezione",
     "clase_creada": "Classe creata",
     "la_clase_se_ha_programado_correctamente": "La classe è stata programmata correttamente",
-    "describeContenidoClase": "Descrivi il contenuto della lezione..."
+    "describeContenidoClase": "Descrivi il contenuto della lezione...",
+    "borrador": "Bozza",
+    "programada": "Programmata",
+    "finalizada": "Completata",
+    "cancelada": "Annullata"
   },
   "lms": {
     "academiaLms": "Accademia / LMS",
@@ -2982,7 +3054,11 @@
     "objetivo": "Obiettivo",
     "eliminadoFavoritos": "Rimosso dai preferiti",
     "alimentoEliminadoFavoritos": "L'alimento è stato rimosso dai tuoi preferiti",
-    "suplementoEliminadoFavoritos": "L'integratore è stato rimosso dai tuoi preferiti"
+    "suplementoEliminadoFavoritos": "L'integratore è stato rimosso dai tuoi preferiti",
+    "seGuardoComoPlantilla": "Salvato anche come modello riutilizzabile",
+    "muyActivo": "Molto attivo",
+    "gananciaMuscular": "Aumento muscolare",
+    "perdidaDeGrasa": "Perdita di grasso"
   },
   "onboarding": {
     "email": "Email",
@@ -3248,7 +3324,14 @@
     "tratamientoDatosSalud": "Trattamento dei dati sanitari *",
     "aceptoDatosSalud": "Accetto che i miei dati sanitari (allergie, infortuni, condizioni mediche) vengano trattati per personalizzare il mio piano di allenamento e nutrizione.",
     "aceptoComunicaciones": "Accetto di ricevere comunicazioni su novità, promozioni e consigli di allenamento.",
-    "seleccionaObjetivo": "Seleziona un obiettivo"
+    "seleccionaObjetivo": "Seleziona un obiettivo",
+    "mejorarCapacidadCardio": "Migliorare la capacità cardiovascolare",
+    "pocoONada": "Poco o nessun esercizio",
+    "ejercicio1a3": "Esercizio 1-3 giorni/settimana",
+    "ejercicio3a5": "Esercizio 3-5 giorni/settimana",
+    "ejercicio6a7": "Esercizio 6-7 giorni/settimana",
+    "mantenerEstado": "Mantenere il mio stato attuale",
+    "mejorarMovilidad": "Migliorare mobilità e flessibilità"
   },
   "packages": {
     "nombreDelPaquete": "Nome del paquete",
@@ -4003,7 +4086,16 @@
     "limpiarBusqueda": "Cancella ricerca",
     "sinResultados": "Nessun risultato",
     "suplementosCargados": "Gli integratori vengono caricati dal database. Aggiungi integratori per vederli qui.",
-    "noHaySuplementos": "Nessun integratore"
+    "noHaySuplementos": "Nessun integratore",
+    "proteina": "Proteina",
+    "rendimiento": "Prestazioni",
+    "saludLabel": "Salute",
+    "vitaminas": "Vitamine",
+    "minerales": "Minerali",
+    "aminoacidos": "Aminoacidi",
+    "carbohidratos": "Carboidrati",
+    "quemadores": "Bruciagrassi",
+    "otros": "Altri"
   },
   "suppliers": {
     "nombreORazonSocial": "Nome o razón social",
@@ -4285,7 +4377,10 @@
     "salidaRegistrada": "Uscita registrata correttamente!",
     "miembro": "Membro",
     "propietario": "Proprietario",
-    "colaborador": "Collaboratore"
+    "colaborador": "Collaboratore",
+    "pagosYFacturacion": "Pagamenti e fatturazione",
+    "informesYAnaliticas": "Report e analisi",
+    "chatLabel": "Chat"
   },
   "workouts": {
     "grupoMuscular": "Gruppo muscolare",
@@ -4407,7 +4502,12 @@
     "anadeEjerciciosBiblioteca": "Aggiungi esercizi alla tua libreria per usarli nei tuoi programmi.",
     "asignaProgramaCliente": "Assegna un programma a un cliente per vederlo qui.",
     "noHayProgramasClientes": "Nessun programma clienti",
-    "grupoMuscularFilter": "Gruppo muscolare"
+    "grupoMuscularFilter": "Gruppo muscolare",
+    "buscarEstiramientos": "Cerca stretching...",
+    "noHayEstiramientos": "Nessuno stretching",
+    "anadeEstiramientos": "Aggiungi esercizi di stretching alla tua libreria.",
+    "anadirEstiramiento": "Aggiungi Stretching",
+    "resistenciaTag": "Resistenza"
   },
   "chatComp": {
     "actualizar": "Aggiorna",
@@ -4491,7 +4591,10 @@
     "configuraciN": "Impostazioni",
     "cerrarSesiN": "Chiudi sesión",
     "configuracion": "Impostazioni",
-    "cerrarSesion": "Esci"
+    "cerrarSesion": "Esci",
+    "tusEspacios": "I tuoi spazi",
+    "espacioActual": "Spazio attuale",
+    "espacioDeTrabajo": "Spazio di lavoro"
   },
   "notifications": {
     "nuevo": "Nuovo",
@@ -4508,7 +4611,8 @@
     "noTienesNuevasNotificacionesHoy": "No tienes Nuovas Notifiche Oggi.",
     "anteriores": "Precedentees",
     "configurarNotificaciones": "Configurar Notifiche",
-    "noTienesNotificaciones": "Nessuna nuova notifica oggi."
+    "noTienesNotificaciones": "Nessuna nuova notifica oggi.",
+    "ahoraMismo": "Proprio adesso"
   },
   "nutritionComp": {
     "editarNombre": "Modifica Nome",
@@ -4985,7 +5089,9 @@
     "irAFormularios": "Vai ai Moduli",
     "clienteNoHaRespondido": "Il cliente non ha ancora risposto a questo modulo.",
     "respuestaDelFormulario": "Risposta del modulo",
-    "formulario": "Modulo"
+    "formulario": "Modulo",
+    "verRespuesta": "Vedi risposta",
+    "verDetalles": "Vedi dettagli"
   },
   "clientReports": {
     "el_reporte_se_ha_guardado_correctamente": "Il report è stato salvato correttamente",
@@ -4995,7 +5101,12 @@
     "nuevaRevision": "Nuova revisione",
     "noHayReportes": "Non ci sono ancora report di revisione per questo cliente.",
     "feedbackDelClienteLabel": "Feedback del cliente:",
-    "feedbackCliente": "Feedback del cliente (opzionale)"
+    "feedbackCliente": "Feedback del cliente (opzionale)",
+    "reporteCreado": "Report creato",
+    "reporteActualizado": "Report aggiornato",
+    "reporteEliminado": "Report eliminato",
+    "editarReporte": "Modifica report",
+    "crearReporte": "Crea report"
   },
   "dashboardLayout": {
     "anadir_a_pantalla_de_inicio": "\"Aggiungi alla schermata iniziale\""
@@ -5079,7 +5190,14 @@
     "notasInstrucciones": "Note / Istruzioni",
     "ejMantenerCore": "Es.: Mantenere il core attivato...",
     "equipo": "Attrezzatura",
-    "copiarSemanaA": "Copia settimana {{week}} a:"
+    "copiarSemanaA": "Copia settimana {{week}} a:",
+    "sinEquipo": "Senza attrezzatura",
+    "maquinaPrensaLabel": "Pressa",
+    "vueltaCalma": "Defaticamento",
+    "barraDeDominadas": "Barra per trazioni",
+    "repeticiones": "Ripetizioni",
+    "segundos": "Secondi",
+    "minutos": "Minuti"
   },
   "acceptStaffInvite": {
     "asnete_al_equipo": "Ãšnete al team"
@@ -5091,7 +5209,9 @@
     "pausa": "Pausa",
     "horaServidor": "Ora server",
     "horaDelServidor": "Ora del server",
-    "totalSolicitudes": "Totale richieste: {{total}}"
+    "totalSolicitudes": "Totale richieste: {{total}}",
+    "enPausa": "In pausa",
+    "fichado": "Timbrato"
   },
   "exerciseForm": {
     "alternativa_anadida": "Alternativa aggiunta",
@@ -5384,7 +5504,8 @@
     "peso": "Peso",
     "altura": "Altezza",
     "actividad": "Attività",
-    "tendenciaCorporal": "Tendenza Corporale"
+    "tendenciaCorporal": "Tendenza Corporale",
+    "resumenNutricional": "Riepilogo Nutrizionale"
   },
   "editableMealName": {
     "editarNombre": "Modifica nome",
@@ -5492,7 +5613,17 @@
     "limpiarBusqueda": "Cancella ricerca",
     "sinResultados": "Nessun risultato",
     "anadeAlimentosBiblioteca": "Aggiungi alimenti alla tua libreria per usarli nei tuoi piani.",
-    "noHayAlimentos": "Nessun alimento"
+    "noHayAlimentos": "Nessun alimento",
+    "proteinas": "Proteine",
+    "carbohidratos": "Carboidrati",
+    "verduras": "Verdure",
+    "frutas": "Frutta",
+    "lacteos": "Latticini",
+    "grasas": "Grassi",
+    "frutosSecos": "Frutta Secca",
+    "otros": "Altri",
+    "sistema": "Sistema",
+    "propios": "Personalizzati"
   },
   "nutritionTemplates": {
     "creaTuPrimeraPlantilla": "Crea il tuo primo modello nutrizionale riutilizzabile da assegnare ai tuoi clienti.",
@@ -5505,7 +5636,18 @@
   "macros": {
     "proteinaPct": "Proteine %",
     "carbohidratosPct": "Carboidrati %",
-    "grasasPct": "Grassi %"
+    "grasasPct": "Grassi %",
+    "equilibrado": "Equilibrato",
+    "balanceGeneral": "Equilibrio generale",
+    "volumen": "Volume",
+    "gananciaMuscular": "Aumento muscolare",
+    "mediterranea": "Mediterranea",
+    "estiloMediterraneo": "Stile mediterraneo",
+    "altoEnProteina": "Alto in proteine",
+    "definicionFuerza": "Definizione / forza",
+    "lowCarb": "Low-carb",
+    "bajaEnCarbos": "Bassa in carboidrati",
+    "cetogenica": "Chetogenica"
   },
   "exercises": {
     "alias": "Alias",
@@ -5515,9 +5657,84 @@
     "urlImagenOSubela": "URL dell'immagine o caricala con il pulsante",
     "musculos": "Muscoli",
     "imagenSubida": "Immagine caricata con successo",
-    "ejerciciosAlternativosPara": "Esercizi alternativi per \"{{name}}\""
+    "ejerciciosAlternativosPara": "Esercizi alternativi per \"{{name}}\"",
+    "alternativaAnadida": "Alternativa aggiunta",
+    "anadidoComoAlternativa": "{{name}} aggiunto come alternativa",
+    "sinEquipo": "Senza attrezzatura",
+    "bandasElasticas": "Bande elastiche",
+    "barraDeDominadas": "Barra per trazioni"
   },
   "invitationOnboarding": {
     "pagarConTarjeta": "Paga con carta"
+  },
+  "beverages": {
+    "aguasEInfusiones": "Acque e Infusi",
+    "cafe": "Caffè",
+    "teEInfusiones": "Tè e Infusi",
+    "lacteos": "Latticini",
+    "lacteosYFermentados": "Latticini / Fermentati",
+    "lacteosYDulces": "Latticini / Dolci",
+    "bebidasVegetales": "Bevande Vegetali",
+    "zumosDeFruta": "Succhi di Frutta",
+    "refrescos": "Bibite",
+    "bebidasLightZero": "Bevande Light / Zero",
+    "bebidasEnergeticas": "Bevande Energetiche",
+    "bebidasIsotonicas": "Bevande Isotoniche",
+    "suplementosDeportivos": "Integratori Sportivi",
+    "bebidasDeCacao": "Bevande al Cacao",
+    "bebidasTradicionales": "Bevande Tradizionali",
+    "fermentados": "Fermentati",
+    "bebidasAlcoholicas": "Bevande Alcoliche"
+  },
+  "muscles": {
+    "pecho": "Petto",
+    "espalda": "Schiena",
+    "espaldaBaja": "Parte bassa della schiena (Lombari)",
+    "hombros": "Spalle (Deltoidi)",
+    "trapecio": "Trapezio",
+    "biceps": "Bicipiti",
+    "triceps": "Tricipiti",
+    "antebrazo": "Avambraccio",
+    "cuadriceps": "Quadricipiti",
+    "isquiotibiales": "Ischiocrurali",
+    "gluteos": "Glutei",
+    "gemelos": "Polpacci",
+    "aductores": "Adduttori",
+    "abductores": "Abduttori",
+    "abdominales": "Addominali",
+    "core": "Core",
+    "cuerpoCompleto": "Corpo intero",
+    "cadera": "Anca",
+    "oblicuos": "Obliqui",
+    "cardio": "Cardio",
+    "cuerpoCompletoMasc": "Corpo Intero",
+    "hombrosSimple": "Spalle"
+  },
+  "equipment": {
+    "mancuernas": "Manubri",
+    "barra": "Bilanciere",
+    "kettlebell": "Kettlebell",
+    "maquina": "Macchina",
+    "polea": "Puleggia",
+    "banco": "Panca",
+    "barraDeDominadas": "Barra per trazioni",
+    "cuerda": "Corda",
+    "bandasElasticas": "Bande elastiche",
+    "poleas": "Pulegge",
+    "cinta": "Tapis roulant",
+    "eliptica": "Ellittica",
+    "guiada": "Multipower"
+  },
+  "colors": {
+    "azul": "Blu",
+    "verde": "Verde",
+    "rojo": "Rosso",
+    "naranja": "Arancione",
+    "violeta": "Viola",
+    "cian": "Ciano",
+    "rosa": "Rosa",
+    "amarillo": "Giallo",
+    "turquesa": "Turchese",
+    "uva": "Uva"
   }
 }

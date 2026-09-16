@@ -67,7 +67,7 @@ export function ClientPlansTab({
                 </Badge>
                 <Badge color="blue" variant="light" radius="md" size="xs">{getDurationWeeks(plan)} sem</Badge>
               </Group>
-              <Text c="dimmed" lineClamp={2} size="xs">{plan.description || "Sin descripción"}</Text>
+              <Text c="dimmed" lineClamp={2} size="xs">{plan.description || t("common.sinDescripcion")}</Text>
               {plan.client_name && (
                 <Badge color="blue" mt="xs" size="xs" variant="outline" radius="md">{plan.client_name}</Badge>
               )}

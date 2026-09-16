@@ -540,7 +540,7 @@ export function NutritionPage() {
     const isFav = isSupplementFavorite(supplementId);
     try {
       await toggleSupplementFavorite.mutateAsync({ supplementId, isFavorite: isFav });
-      notifications.show({ title: isFav ? "Eliminado de favoritos" : t("nutritionPage.añadidoAFavoritos"), message: isFav ? t("nutrition.suplementoEliminadoFavoritos") : t("nutritionPage.elSuplementoSeHaAñadidoATusFavori"), color: isFav ? "gray" : "yellow" });
+      notifications.show({ title: isFav ? t("nutrition.eliminadoFavoritos") : t("nutritionPage.añadidoAFavoritos"), message: isFav ? t("nutrition.suplementoEliminadoFavoritos") : t("nutritionPage.elSuplementoSeHaAñadidoATusFavori"), color: isFav ? "gray" : "yellow" });
     } catch {
       notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoActualizarEl"), color: "red" });
     }
@@ -802,7 +802,7 @@ export function NutritionPage() {
         if (isTemplateModeOn) {
           const templateName = hasClient ? `${values.name} (Plantilla)` : values.name;
           await createMealPlan.mutateAsync({ ...basePlanData, client_id: undefined, is_template: true, name: templateName, start_date: undefined, end_date: undefined });
-          notifications.show({ title: hasClient ? "Plantilla creada" : "Plantilla creada", message: hasClient ? "Se guardó también como plantilla reutilizable" : `${values.name} se ha creado correctamente`, color: hasClient ? "teal" : "green", icon: hasClient ? <IconTemplate size={16} /> : <IconCheck size={16} /> });
+          notifications.show({ title: t("nutrition.plantillaCreada"), message: hasClient ? t("nutrition.seGuardoComoPlantilla") : `${values.name} se ha creado correctamente`, color: hasClient ? "teal" : "green", icon: hasClient ? <IconTemplate size={16} /> : <IconCheck size={16} /> });
         }
       }
       closeBuilder(); setSelectedClientId(null); setSelectedClient(null);

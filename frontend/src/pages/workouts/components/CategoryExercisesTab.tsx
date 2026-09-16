@@ -101,10 +101,10 @@ export function CategoryExercisesTab({
           size="xs"
           radius="md"
           data={[
-            { label: "Todos", value: "all" },
+            { label: t("common.todos"), value: "all" },
             { label: "⭐ Favoritos", value: "favorites" },
-            { label: "Sistema", value: "system" },
-            { label: "Propios", value: "custom" },
+            { label: t("foods.sistema"), value: "system" },
+            { label: t("foods.propios"), value: "custom" },
           ]}
         />
         {muscleGroups && onMuscleGroupFilterChange && (

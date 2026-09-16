@@ -62,51 +62,52 @@ import {
   type ExerciseFormValues,
 } from "../../pages/workouts/components/ExerciseFormModal";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 // Standardized muscle groups and equipment - exported for reuse
 // Values match the actual data in the exercises table
 export const MUSCLE_GROUPS = [
-  { value: "pecho", label: "Pecho" },
-  { value: "espalda", label: "Espalda" },
-  { value: "espalda baja", label: "Espalda baja (Lumbares)" },
-  { value: "hombros", label: "Hombros (Deltoides)" },
-  { value: "trapecio", label: "Trapecio" },
-  { value: "bíceps", label: "Bíceps" },
-  { value: "tríceps", label: "Tríceps" },
-  { value: "antebrazo", label: "Antebrazo" },
-  { value: "cuadriceps", label: "Cuádriceps" },
-  { value: "isquiotibiales", label: "Isquiotibiales" },
-  { value: "glúteos", label: "Glúteos" },
-  { value: "gemelos", label: "Gemelos" },
-  { value: "abductores", label: "Abductores" },
-  { value: "aductores", label: "Aductores" },
-  { value: "cadera", label: "Cadera" },
-  { value: "core", label: "Core" },
-  { value: "abdominales", label: "Abdominales" },
-  { value: "oblicuos", label: "Oblicuos" },
-  { value: "cardio", label: "Cardio" },
-  { value: "cuerpo completo", label: "Cuerpo Completo" },
+  { value: "pecho", label: i18next.t("muscles.pecho") },
+  { value: "espalda", label: i18next.t("muscles.espalda") },
+  { value: "espalda baja", label: i18next.t("muscles.espaldaBaja") },
+  { value: "hombros", label: i18next.t("muscles.hombros") },
+  { value: "trapecio", label: i18next.t("muscles.trapecio") },
+  { value: "bíceps", label: i18next.t("muscles.biceps") },
+  { value: "tríceps", label: i18next.t("muscles.triceps") },
+  { value: "antebrazo", label: i18next.t("muscles.antebrazo") },
+  { value: "cuadriceps", label: i18next.t("muscles.cuadriceps") },
+  { value: "isquiotibiales", label: i18next.t("muscles.isquiotibiales") },
+  { value: "glúteos", label: i18next.t("muscles.gluteos") },
+  { value: "gemelos", label: i18next.t("muscles.gemelos") },
+  { value: "abductores", label: i18next.t("muscles.abductores") },
+  { value: "aductores", label: i18next.t("muscles.aductores") },
+  { value: "cadera", label: i18next.t("muscles.cadera") },
+  { value: "core", label: i18next.t("muscles.core") },
+  { value: "abdominales", label: i18next.t("muscles.abdominales") },
+  { value: "oblicuos", label: i18next.t("muscles.oblicuos") },
+  { value: "cardio", label: i18next.t("muscles.cardio") },
+  { value: "cuerpo completo", label: i18next.t("muscles.cuerpoCompletoMasc") },
 ];
 
 export const EQUIPMENT_TYPES = [
-  { value: "ninguno", label: "Sin equipo" },
-  { value: "barra", label: "Barra" },
-  { value: "mancuernas", label: "Mancuernas" },
-  { value: "banco", label: "Banco" },
+  { value: "ninguno", label: i18next.t("workoutBuilder.sinEquipo") },
+  { value: "barra", label: i18next.t("equipment.barra") },
+  { value: "mancuernas", label: i18next.t("equipment.mancuernas") },
+  { value: "banco", label: i18next.t("equipment.banco") },
   { value: "rack", label: "Rack" },
-  { value: "barra de dominadas", label: "Barra de dominadas" },
-  { value: "máquina prensa", label: "Máquina prensa" },
-  { value: "maquina", label: "Máquina" },
-  { value: "poleas", label: "Poleas" },
-  { value: "cinta", label: "Cinta" },
-  { value: "eliptica", label: "Elíptica" },
-  { value: "guiada", label: "Guiada (Multipower)" },
+  { value: "barra de dominadas", label: i18next.t("equipment.barraDeDominadas") },
+  { value: "máquina prensa", label: i18next.t("workoutBuilder.maquinaPrensaLabel") },
+  { value: "maquina", label: i18next.t("equipment.maquina") },
+  { value: "poleas", label: i18next.t("equipment.poleas") },
+  { value: "cinta", label: i18next.t("equipment.cinta") },
+  { value: "eliptica", label: i18next.t("equipment.eliptica") },
+  { value: "guiada", label: i18next.t("equipment.guiada") },
 ];
 
 const DURATION_TYPE_OPTIONS = [
-  { value: "reps", label: "Repeticiones" },
-  { value: "seconds", label: "Segundos" },
-  { value: "minutes", label: "Minutos" },
+  { value: "reps", label: i18next.t("workoutBuilder.repeticiones") },
+  { value: "seconds", label: i18next.t("workoutBuilder.segundos") },
+  { value: "minutes", label: i18next.t("workoutBuilder.minutos") },
   { value: "distance", label: "Km" },
 ];
 
@@ -617,7 +618,7 @@ export function WorkoutBuilder({
                               : block.type === "main"
                                 ? "Principal"
                                 : block.type === "cooldown"
-                                  ? "Vuelta calma"
+                                  ? t("workoutBuilder.vueltaCalma")
                                   : block.type === "superset"
                                     ? "Superserie"
                                     : "Circuito"}
@@ -1502,7 +1503,7 @@ export function WorkoutBuilderWithDays({
             <Box>
               <Text size="sm" fw={600}>{selectedClient.first_name} {selectedClient.last_name}</Text>
               <Text size="xs" c="dimmed">
-                {selectedClient.goals || "Sin objetivos"}
+                {selectedClient.goals || t("common.sinObjetivos")}
               </Text>
               {selectedClient.health_data?.injuries?.length ? (
                 <Group gap={4} mt={4}>

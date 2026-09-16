@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Button, Center, Stack, Text, Title } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
@@ -60,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <Stack align="center" gap="md" maw={600}>
             <IconAlertTriangle size={48} color="var(--nv-warning)" stroke={1.5} />
             <Title order={3}>
-              {isChunk ? "Nueva versión disponible" : "Algo salió mal"}
+              {isChunk ? i18next.t("errors.nuevaVersionDisponible") : i18next.t("errors.algoSalioMal")}
             </Title>
             <Text c="dimmed" ta="center" size="sm">
               {isChunk
@@ -84,7 +85,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 }
               }}
             >
-              {isChunk ? "Recargar página" : "Reintentar"}
+              {isChunk ? i18next.t("errors.recargarPagina") : i18next.t("errors.reintentar")}
             </Button>
           </Stack>
         </Center>

@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import {
   ActionIcon,
   Badge,
@@ -55,15 +56,15 @@ interface Supplement {
 }
 
 const SUPPLEMENT_CATEGORIES = [
-  { value: "proteina", label: "Proteína" },
-  { value: "rendimiento", label: "Rendimiento" },
-  { value: "salud", label: "Salud" },
-  { value: "vitaminas", label: "Vitaminas" },
-  { value: "minerales", label: "Minerales" },
-  { value: "aminoacidos", label: "Aminoácidos" },
-  { value: "carbohidratos", label: "Carbohidratos" },
-  { value: "quemadores", label: "Quemadores" },
-  { value: "otros", label: "Otros" },
+  { value: "proteina", label: i18next.t("supplements.proteina") },
+  { value: "rendimiento", label: i18next.t("supplements.rendimiento") },
+  { value: "salud", label: i18next.t("supplements.saludLabel") },
+  { value: "vitaminas", label: i18next.t("supplements.vitaminas") },
+  { value: "minerales", label: i18next.t("supplements.minerales") },
+  { value: "aminoacidos", label: i18next.t("supplements.aminoacidos") },
+  { value: "carbohidratos", label: i18next.t("supplements.carbohidratos") },
+  { value: "quemadores", label: i18next.t("supplements.quemadores") },
+  { value: "otros", label: i18next.t("supplements.otros") },
 ];
 
 function getCategoryLabel(value?: string) {

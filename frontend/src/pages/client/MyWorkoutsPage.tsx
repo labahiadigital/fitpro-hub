@@ -126,7 +126,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
   const grouped = useMemo(() => {
     const map: Record<string, typeof filtered> = {};
     filtered.forEach((ex) => {
-      const groups = ex.muscle_groups?.length ? ex.muscle_groups : ["Sin grupo"];
+      const groups = ex.muscle_groups?.length ? ex.muscle_groups : [t("myWorkouts.sinGrupo")];
       groups.forEach((g) => {
         if (!map[g]) map[g] = [];
         map[g].push(ex);
@@ -614,10 +614,11 @@ function WorkoutSatisfactionSelector({
   value: number | null;
   onChange: (v: number | null) => void;
 }) {
+  const { t } = useTranslation();
   const options = [
-    { rating: 1, icon: IconMoodSad, label: "Mal", color: "red" },
-    { rating: 2, icon: IconMoodEmpty, label: "Normal", color: "yellow" },
-    { rating: 3, icon: IconMoodSmile, label: "Bien", color: "green" },
+    { rating: 1, icon: IconMoodSad, label: t("myWorkouts.mal"), color: "red" },
+    { rating: 2, icon: IconMoodEmpty, label: t("myWorkouts.normal"), color: "yellow" },
+    { rating: 3, icon: IconMoodSmile, label: t("myWorkouts.bien"), color: "green" },
   ];
   return (
     <Box>

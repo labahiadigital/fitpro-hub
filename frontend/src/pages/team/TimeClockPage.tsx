@@ -285,7 +285,7 @@ function ClockTab() {
                 {isPaused ? <IconClockPause size={32} /> : <IconClockPlay size={32} />}
               </ThemeIcon>
               <Text fw={600} size="lg">
-                {isPaused ? "En pausa" : "Fichado"} desde {formatTime(status?.clock_in)}
+                {isPaused ? t("timeClock.enPausa") : t("timeClock.fichado")} desde {formatTime(status?.clock_in)}
               </Text>
               <Text ff="monospace" fw={700} size="xl" c={isPaused ? "yellow" : "green"}>
                 {elapsedStr}

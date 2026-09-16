@@ -581,14 +581,14 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                             {action.type === "send_email" && (
                               <Select
                                 data={[
-                                  { value: "welcome", label: "Bienvenida" },
+                                  { value: "welcome", label: t("automations.bienvenida") },
                                   {
                                     value: "booking_reminder",
-                                    label: "Recordatorio de reserva",
+                                    label: t("automations.recordatorioReserva"),
                                   },
                                   {
                                     value: "payment_reminder",
-                                    label: "Recordatorio de pago",
+                                    label: t("automations.recordatorioPago"),
                                   },
                                   {
                                     value: "reactivation",

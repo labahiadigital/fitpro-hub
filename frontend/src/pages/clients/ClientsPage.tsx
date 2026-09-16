@@ -205,7 +205,7 @@ function ClientCard({
       <Group justify="space-between" pt="sm" style={{ borderTop: "1px solid var(--border-subtle)" }}>
         <Group gap="xs">
           <IconPhone size={14} color="var(--nv-slate-light)" />
-          <Text size="xs" c="dimmed">{client.phone || "Sin teléfono"}</Text>
+          <Text size="xs" c="dimmed">{client.phone || t("clients.sinTelefono")}</Text>
         </Group>
         <StatusBadge status={getClientStatus(client)} />
       </Group>
@@ -453,8 +453,8 @@ function AbandonedCartList({
             }
             data={[
               { label: "Todos", value: "all" },
-              { label: "Acepta marketing", value: "yes" },
-              { label: "No acepta", value: "no" },
+              { label: t("clients.aceptaMarketing"), value: "yes" },
+              { label: t("clients.noAcepta"), value: "no" },
             ]}
           />
         </Group>
@@ -793,8 +793,8 @@ function TrackingList({
                 : status === "delivered" ? "Entregado"
                 : status === "opened" || status === "unique_opened" ? "Leído"
                 : status === "clicked" ? "Click"
-                : status === "soft_bounce" ? "Rebote leve"
-                : status === "hard_bounce" ? "Rebote fuerte"
+                : status === "soft_bounce" ? t("clients.reboteLeve")
+                : status === "hard_bounce" ? t("clients.reboteFuerte")
                 : status || "—";
               return (
                 <Table.Tr key={item.id}>
@@ -868,7 +868,7 @@ function TrackingList({
                         label={
                           isClosedStatus
                             ? "No puedes reenviar una invitación cerrada"
-                            : "Reenviar invitación"
+                            : t("clients.reenviarInvitacion")
                         }
                         withArrow
                       >

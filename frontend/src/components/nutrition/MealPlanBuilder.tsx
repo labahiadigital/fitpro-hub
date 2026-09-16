@@ -408,7 +408,7 @@ export function MealPlanBuilder({
       return {
         items: (data?.items || []).map((food: any) => ({
           id: food.id,
-          name: food.name || "Sin nombre",
+          name: food.name || t("common.sinNombre"),
           calories: food.calories || 0,
           protein: food.protein_g || 0,
           carbs: food.carbs_g || 0,
@@ -930,7 +930,7 @@ export function MealPlanBuilder({
                 {selectedClient.weight_kg != null && selectedClient.height_cm != null ? " | " : ""}
                 {selectedClient.height_cm != null ? `${selectedClient.height_cm}cm` : ""}
                 {(selectedClient.weight_kg != null || selectedClient.height_cm != null) && selectedClient.goals ? " | " : ""}
-                {selectedClient.goals || "Sin objetivos"}
+                {selectedClient.goals || t("common.sinObjetivos")}
               </Text>
               {(selectedClient.health_data?.allergies?.length || selectedClient.health_data?.intolerances?.length) ? (
                 <Group gap={4} mt={4}>

@@ -148,9 +148,9 @@ export function ProgramBuilderSidebar({
         />
         <Select
           data={[
-            { value: "beginner", label: "Principiante" },
-            { value: "intermediate", label: "Intermedio" },
-            { value: "advanced", label: "Avanzado" },
+            { value: "beginner", label: t("workouts.principiante") },
+            { value: "intermediate", label: t("workouts.intermedio") },
+            { value: "advanced", label: t("workouts.avanzado") },
           ]}
           label={t("common.dificultad")}
           radius="md"
@@ -161,11 +161,11 @@ export function ProgramBuilderSidebar({
 
       <MultiSelect
         data={[
-          { value: "hipertrofia", label: "Hipertrofia" },
-          { value: "fuerza", label: "Fuerza" },
-          { value: "pérdida de peso", label: "Pérdida de peso" },
-          { value: "tonificación", label: "Tonificación" },
-          { value: "resistencia", label: "Resistencia" },
+          { value: "hipertrofia", label: t("workouts.hipertrofia") },
+          { value: "fuerza", label: t("workouts.fuerza") },
+          { value: "pérdida de peso", label: t("workouts.perdidaDePeso") },
+          { value: "tonificación", label: t("workouts.tonificacion") },
+          { value: "resistencia", label: t("workouts.resistenciaTag") },
         ]}
         label={t("common.etiquetas")}
         placeholder={t("programBuilder.anadeEtiquetas")}

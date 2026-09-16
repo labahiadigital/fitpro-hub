@@ -28,6 +28,7 @@ import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { useAuthStore } from "../../stores/auth";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 interface Suggestion {
   id: string;
@@ -107,7 +108,7 @@ const INITIAL_SUGGESTIONS: Suggestion[] = [
 
 const STATUS_CONFIG: Record<Suggestion["status"], { color: string; label: string }> = {
   nueva: { color: "blue", label: "Nueva" },
-  en_revisión: { color: "yellow", label: "En revisión" },
+  en_revisión: { color: "yellow", label: i18next.t("suggestions.enRevision") },
   planificada: { color: "violet", label: "Planificada" },
   completada: { color: "green", label: "Completada" },
 };

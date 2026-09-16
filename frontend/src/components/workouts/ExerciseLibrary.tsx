@@ -31,6 +31,7 @@ import {
 import { useState } from "react";
 import { BottomSheet } from "../common/BottomSheet";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 interface Exercise {
   id: string;
@@ -68,15 +69,15 @@ const muscleGroupOptions = [
 ];
 
 const equipmentOptions = [
-  { value: "none", label: "Sin equipo" },
+  { value: "none", label: i18next.t("exercises.sinEquipo") },
   { value: "dumbbells", label: "Mancuernas" },
   { value: "barbell", label: "Barra" },
   { value: "kettlebell", label: "Kettlebell" },
-  { value: "resistance_bands", label: "Bandas elásticas" },
+  { value: "resistance_bands", label: i18next.t("exercises.bandasElasticas") },
   { value: "cable", label: "Poleas" },
   { value: "machine", label: "Máquina" },
   { value: "bench", label: "Banco" },
-  { value: "pull_up_bar", label: "Barra de dominadas" },
+  { value: "pull_up_bar", label: i18next.t("exercises.barraDeDominadas") },
 ];
 
 const difficultyColors: Record<string, string> = {

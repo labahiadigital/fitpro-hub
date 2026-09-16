@@ -31,17 +31,18 @@ import { EmptyState } from "../../../components/common/EmptyState";
 import { RectificationButton } from "../../../components/common/RectificationButton";
 import { ViewModeToggle } from "../../../components/common/ViewModeToggle";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 const FOOD_CATEGORIES = [
-  { value: "", label: "Todas las categorías" },
-  { value: "Proteínas", label: "Proteínas" },
-  { value: "Carbohidratos", label: "Carbohidratos" },
-  { value: "Verduras", label: "Verduras" },
-  { value: "Frutas", label: "Frutas" },
-  { value: "Lácteos", label: "Lácteos" },
-  { value: "Grasas", label: "Grasas" },
-  { value: "Frutos Secos", label: "Frutos Secos" },
-  { value: "Otros", label: "Otros" },
+  { value: "", label: i18next.t("nutrition.todasLasCategorias") },
+  { value: "Proteínas", label: i18next.t("foods.proteinas") },
+  { value: "Carbohidratos", label: i18next.t("foods.carbohidratos") },
+  { value: "Verduras", label: i18next.t("foods.verduras") },
+  { value: "Frutas", label: i18next.t("foods.frutas") },
+  { value: "Lácteos", label: i18next.t("foods.lacteos") },
+  { value: "Grasas", label: i18next.t("foods.grasas") },
+  { value: "Frutos Secos", label: i18next.t("foods.frutosSecos") },
+  { value: "Otros", label: i18next.t("foods.otros") },
 ];
 
 interface FoodsTabProps {
@@ -113,7 +114,7 @@ export function FoodsTab({
   onViewModeChange,
   canEditSystemFoods = false,
 }: FoodsTabProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation();
   // Helper para decidir si renderizar los botones de editar/eliminar de
   // un food. Foods propios del workspace: siempre. Foods globales del
   // sistema: solo si el usuario tiene permiso (lo concede el backend a
@@ -138,7 +139,7 @@ export function FoodsTab({
           size="xs"
           radius="md"
           data={[
-            { label: "Todos", value: "all" },
+            { label: t("common.todos"), value: "all" },
             { label: "⭐ Favoritos", value: "favorites" },
           ]}
           styles={{ root: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
@@ -149,9 +150,9 @@ export function FoodsTab({
           size="xs"
           radius="md"
           data={[
-            { label: "Todos", value: "all" },
-            { label: "Sistema", value: "system" },
-            { label: "Propios", value: "custom" },
+            { label: t("common.todos"), value: "all" },
+            { label: t("foods.sistema"), value: "system" },
+            { label: t("foods.propios"), value: "custom" },
           ]}
           styles={{ root: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
         />

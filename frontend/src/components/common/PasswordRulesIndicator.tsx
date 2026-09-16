@@ -1,5 +1,6 @@
 import { Group, Stack, Text } from "@mantine/core";
 import { IconCheck, IconCircle, IconX } from "@tabler/icons-react";
+import i18next from "i18next";
 
 export interface PasswordRule {
   id: string;
@@ -10,22 +11,22 @@ export interface PasswordRule {
 export const DEFAULT_PASSWORD_RULES: PasswordRule[] = [
   {
     id: "length",
-    label: "Mínimo 8 caracteres",
+    label: i18next.t("auth.minimo8Caracteres"),
     test: (v) => v.length >= 8,
   },
   {
     id: "uppercase",
-    label: "Al menos una letra mayúscula (A-Z)",
+    label: i18next.t("auth.alMenosUnaMayuscula"),
     test: (v) => /[A-Z]/.test(v),
   },
   {
     id: "lowercase",
-    label: "Al menos una letra minúscula (a-z)",
+    label: i18next.t("auth.alMenosUnaMinuscula"),
     test: (v) => /[a-z]/.test(v),
   },
   {
     id: "number",
-    label: "Al menos un número (0-9)",
+    label: i18next.t("auth.alMenosUnNumero"),
     test: (v) => /[0-9]/.test(v),
   },
 ];
@@ -35,7 +36,7 @@ export function isStrongPassword(value: string, rules = DEFAULT_PASSWORD_RULES):
 }
 
 export function passwordValidator(value: string): string | null {
-  if (!value) return "Introduce una contraseña";
+  if (!value) return i18next.t("auth.introduceContrasena");
   for (const rule of DEFAULT_PASSWORD_RULES) {
     if (!rule.test(value)) return rule.label;
   }

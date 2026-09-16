@@ -1,6 +1,7 @@
 import { Box, Group, Text, Tooltip } from "@mantine/core";
 import { Sparkline } from "@mantine/charts";
 import { IconArrowDownRight, IconArrowUpRight, IconMinus } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 interface KPICardProps {
   title: string;
@@ -23,6 +24,7 @@ export function KPICard({
   suffix = "",
   chartData,
 }: KPICardProps) {
+  const { t } = useTranslation();
   const type = changeType || (change && change > 0 ? "positive" : change && change < 0 ? "negative" : "stable");
 
   const colors = {
@@ -44,7 +46,7 @@ export function KPICard({
         
         {/* Trend Pill */}
         {(change !== undefined || type === "stable") && (
-          <Tooltip label={changeLabel || "Vs mes anterior"} withArrow position="top">
+          <Tooltip label={changeLabel || t("common.vsMesAnterior")} withArrow position="top">
             <Box
               className="pill-badge"
               style={{

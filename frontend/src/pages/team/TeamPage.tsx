@@ -75,6 +75,7 @@ import {
   type CustomRole,
 } from "../../hooks/useCustomRoles";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 interface PermissionDef {
   resource: string;
@@ -84,24 +85,24 @@ interface PermissionDef {
 }
 
 const PERMISSION_DEFS: PermissionDef[] = [
-  { resource: "clients", label: "Clientes", description: "Gestión de clientes", actions: ["create", "read", "update", "delete"] },
-  { resource: "workouts", label: "Entrenamientos", description: "Programas de entrenamiento", actions: ["create", "read", "update", "delete"] },
-  { resource: "nutrition", label: "Nutrición", description: "Planes nutricionales", actions: ["create", "read", "update", "delete"] },
-  { resource: "calendar", label: "Calendario", description: "Calendario y reservas", actions: ["create", "read", "update", "delete"] },
-  { resource: "payments", label: "Pagos", description: "Pagos y suscripciones", actions: ["create", "read", "update", "delete"] },
-  { resource: "team", label: "Equipo", description: "Gestión de equipo", actions: ["create", "read", "update", "delete"] },
-  { resource: "settings", label: "Configuración", description: "Ajustes del workspace", actions: ["read", "update"] },
-  { resource: "reports", label: "Reportes", description: "Estadísticas y reportes", actions: ["read"] },
-  { resource: "chat", label: "Chat", description: "Chat y mensajería", actions: ["read", "send"] },
-  { resource: "automations", label: "Automatizaciones", description: "Reglas automáticas", actions: ["create", "read", "update", "delete"] },
-  { resource: "forms", label: "Formularios", description: "Formularios personalizados", actions: ["create", "read", "update", "delete"] },
-  { resource: "documents", label: "Documentos", description: "Gestión documental", actions: ["create", "read", "update", "delete"] },
-  { resource: "catalog", label: "Catálogo", description: "Productos y servicios", actions: ["create", "read", "update", "delete"] },
-  { resource: "billing", label: "Facturación", description: "Facturación y contabilidad", actions: ["create", "read", "update", "delete"] },
-  { resource: "community", label: "Comunidad", description: "Comunidad y retos", actions: ["create", "read", "update", "delete"] },
-  { resource: "lms", label: "Academia", description: "Cursos y formación", actions: ["create", "read", "update", "delete"] },
-  { resource: "live_classes", label: "Clases en Vivo", description: "Clases en directo", actions: ["create", "read", "update", "delete"] },
-  { resource: "tasks", label: "Tareas", description: "Gestión de tareas", actions: ["create", "read", "update", "delete"] },
+  { resource: "clients", label: i18next.t("team.clientes"), description: i18next.t("team.gestionDeClientes"), actions: ["create", "read", "update", "delete"] },
+  { resource: "workouts", label: i18next.t("team.entrenamientos"), description: i18next.t("team.programasDeEntrenamiento"), actions: ["create", "read", "update", "delete"] },
+  { resource: "nutrition", label: i18next.t("nav.nutrition"), description: i18next.t("team.planesNutricionales"), actions: ["create", "read", "update", "delete"] },
+  { resource: "calendar", label: i18next.t("team.calendario"), description: i18next.t("team.calendarioYReservas"), actions: ["create", "read", "update", "delete"] },
+  { resource: "payments", label: i18next.t("team.pagos"), description: i18next.t("team.pagosYSuscripciones"), actions: ["create", "read", "update", "delete"] },
+  { resource: "team", label: i18next.t("team.equipo"), description: i18next.t("team.gestionDeEquipo"), actions: ["create", "read", "update", "delete"] },
+  { resource: "settings", label: i18next.t("team.configuracion"), description: i18next.t("team.ajustesDelWorkspace"), actions: ["read", "update"] },
+  { resource: "reports", label: i18next.t("team.reportes"), description: i18next.t("team.estadisticasYReportes"), actions: ["read"] },
+  { resource: "chat", label: i18next.t("team.chatLabel"), description: i18next.t("team.chatYMensajeria"), actions: ["read", "send"] },
+  { resource: "automations", label: i18next.t("nav.automations"), description: i18next.t("team.reglasAutomaticas"), actions: ["create", "read", "update", "delete"] },
+  { resource: "forms", label: i18next.t("nav.forms"), description: i18next.t("team.formulariosPersonalizados"), actions: ["create", "read", "update", "delete"] },
+  { resource: "documents", label: i18next.t("nav.documents"), description: i18next.t("team.gestionDocumental"), actions: ["create", "read", "update", "delete"] },
+  { resource: "catalog", label: i18next.t("team.catalogo"), description: i18next.t("team.productosYServicios"), actions: ["create", "read", "update", "delete"] },
+  { resource: "billing", label: i18next.t("team.facturacion"), description: i18next.t("team.facturacionYContabilidad"), actions: ["create", "read", "update", "delete"] },
+  { resource: "community", label: i18next.t("team.comunidad"), description: i18next.t("team.comunidadYRetos"), actions: ["create", "read", "update", "delete"] },
+  { resource: "lms", label: i18next.t("team.academia"), description: i18next.t("team.cursosYFormacion"), actions: ["create", "read", "update", "delete"] },
+  { resource: "live_classes", label: i18next.t("team.clasesEnVivo"), description: i18next.t("team.clasesEnDirecto"), actions: ["create", "read", "update", "delete"] },
+  { resource: "tasks", label: i18next.t("team.tareas"), description: i18next.t("team.gestionDeTareas"), actions: ["create", "read", "update", "delete"] },
 ];
 
 const ACTION_LABELS: Record<string, string> = {
@@ -223,16 +224,16 @@ function PermissionsMatrix({
 }
 
 const GROUP_COLORS = [
-  { value: "blue", label: "Azul" },
-  { value: "green", label: "Verde" },
-  { value: "red", label: "Rojo" },
-  { value: "orange", label: "Naranja" },
-  { value: "violet", label: "Violeta" },
-  { value: "cyan", label: "Cian" },
-  { value: "pink", label: "Rosa" },
-  { value: "yellow", label: "Amarillo" },
-  { value: "teal", label: "Turquesa" },
-  { value: "grape", label: "Uva" },
+  { value: "blue", label: i18next.t("colors.azul") },
+  { value: "green", label: i18next.t("colors.verde") },
+  { value: "red", label: i18next.t("colors.rojo") },
+  { value: "orange", label: i18next.t("colors.naranja") },
+  { value: "violet", label: i18next.t("colors.violeta") },
+  { value: "cyan", label: i18next.t("colors.cian") },
+  { value: "pink", label: i18next.t("colors.rosa") },
+  { value: "yellow", label: i18next.t("colors.amarillo") },
+  { value: "teal", label: i18next.t("colors.turquesa") },
+  { value: "grape", label: i18next.t("colors.uva") },
 ];
 
 export function TeamPage() {

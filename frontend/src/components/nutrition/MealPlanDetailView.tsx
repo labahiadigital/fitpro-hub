@@ -46,6 +46,7 @@ import {
   calculateTDEE,
 } from "../../utils/calories";
 import { formatDecimal } from "../../utils/format";
+import i18next from "i18next";
 
 // Types
 interface ClientData {
@@ -182,7 +183,7 @@ function getMealFoods(meal: Meal): MealFood[] {
       if (!data) {
         return {
           id: item.id,
-          name: "Sin nombre",
+          name: i18next.t("common.sinNombre"),
           quantity: item.quantity_grams,
           calories: 0,
           protein: 0,
@@ -196,7 +197,7 @@ function getMealFoods(meal: Meal): MealFood[] {
       return {
         id: item.id,
         food_id: item.food_id || item.supplement_id,
-        name: data.name || "Sin nombre",
+        name: data.name || i18next.t("common.sinNombre"),
         quantity: item.quantity_grams,
         calories: Math.round((data.calories || 0) * factor),
         protein: Math.round(((data.protein || 0) * factor) * 10) / 10,
@@ -599,8 +600,8 @@ export function MealPlanDetailView({
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "overview", label: "Resumen Nutricional" },
-            { value: "meals", label: "Plan de Comidas" },
+            { value: "overview", label: t("mealPlanDetail.resumenNutricional") },
+            { value: "meals", label: t("mealPlanDetail.planDeComidas") },
             { value: "calculator", label: t("nutritionComp.calculadoraEnergetica") },
             { value: "supplements", label: t("nutritionComp.suplementacion") },
           ]}
@@ -919,8 +920,8 @@ export function MealPlanDetailView({
                   <Select
                     label={t("mealPlanDetail.sexo")}
                     data={[
-                      { value: "male", label: "Hombre" },
-                      { value: "female", label: "Mujer" },
+                      { value: "male", label: t("common.hombre") },
+                      { value: "female", label: t("common.mujer") },
                     ]}
                     disabled={!editingClient}
                     {...clientForm.getInputProps("gender")}

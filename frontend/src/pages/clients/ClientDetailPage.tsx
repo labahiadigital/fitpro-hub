@@ -122,22 +122,23 @@ import {
   INTOLERANCES_SELECT_DATA,
 } from "../../constants/allergens";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 const COMMON_ALLERGENS = ALLERGENS_SELECT_DATA;
 
 const CLIENT_DETAIL_TABS_SELECT_DATA = [
-  { value: "overview", label: "Resumen" },
-  { value: "programs", label: "Programas" },
-  { value: "nutrition", label: "Nutrición" },
-  { value: "health", label: "Salud" },
-  { value: "progress", label: "Progreso" },
-  { value: "sessions", label: "Sesiones" },
-  { value: "tasks", label: "Tareas" },
-  { value: "history", label: "Historial" },
-  { value: "client-calendar", label: "Calendario" },
-  { value: "photos", label: "Fotos" },
-  { value: "documents", label: "Documentos" },
-  { value: "payments", label: "Pagos y suscripciones" },
+  { value: "overview", label: i18next.t("clientDetail.resumen") },
+  { value: "programs", label: i18next.t("clientDetail.programas") },
+  { value: "nutrition", label: i18next.t("clientDetail.nutricion") },
+  { value: "health", label: i18next.t("clientDetail.salud") },
+  { value: "progress", label: i18next.t("clientDetail.progreso") },
+  { value: "sessions", label: i18next.t("clientDetail.sesiones") },
+  { value: "tasks", label: i18next.t("clientDetail.tareas") },
+  { value: "history", label: i18next.t("clientDetail.historial") },
+  { value: "client-calendar", label: i18next.t("clientDetail.calendario") },
+  { value: "photos", label: i18next.t("clientDetail.fotos") },
+  { value: "documents", label: i18next.t("clientDetail.documentos") },
+  { value: "payments", label: i18next.t("clientDetail.pagosYSuscripciones") },
 ];
 
 const COMMON_INTOLERANCES = INTOLERANCES_SELECT_DATA;
@@ -249,22 +250,22 @@ function ClientPaymentsTab({
   const inactiveSubs = (subsData as any[]).filter((s) => !ACTIVE_STATES.has(s.status));
 
   const statusMap: Record<string, { label: string; color: string }> = {
-    completed: { label: "Pagado", color: "green" },
-    succeeded: { label: "Pagado", color: "green" },
-    pending: { label: "Pendiente", color: "yellow" },
-    failed: { label: "Fallido", color: "red" },
-    refunded: { label: "Devuelto", color: "gray" },
+    completed: { label: i18next.t("clientDetail.pagado"), color: "green" },
+    succeeded: { label: i18next.t("clientDetail.pagado"), color: "green" },
+    pending: { label: i18next.t("clientDetail.pendienteLabel"), color: "yellow" },
+    failed: { label: i18next.t("clientDetail.fallido"), color: "red" },
+    refunded: { label: i18next.t("clientDetail.devuelto"), color: "gray" },
   };
 
   const subStatusMap: Record<string, { label: string; color: string }> = {
-    active: { label: "Activa", color: "green" },
-    trialing: { label: "Periodo de prueba", color: "blue" },
-    past_due: { label: "Pago atrasado", color: "orange" },
-    paused: { label: "Pausada", color: "yellow" },
-    canceled: { label: "Cancelada", color: "gray" },
-    cancelled: { label: "Cancelada", color: "gray" },
-    expired: { label: "Caducada", color: "gray" },
-    failed: { label: "Fallida", color: "red" },
+    active: { label: i18next.t("clientDetail.activa"), color: "green" },
+    trialing: { label: i18next.t("clientDetail.periodoDePrueba"), color: "blue" },
+    past_due: { label: i18next.t("clientDetail.pagoAtrasado"), color: "orange" },
+    paused: { label: i18next.t("clientDetail.pausada"), color: "yellow" },
+    canceled: { label: i18next.t("clientDetail.cancelada"), color: "gray" },
+    cancelled: { label: i18next.t("clientDetail.cancelada"), color: "gray" },
+    expired: { label: i18next.t("clientDetail.caducada"), color: "gray" },
+    failed: { label: i18next.t("clientDetail.fallida"), color: "red" },
   };
 
   const intervalLabel = (i?: string) => {
@@ -660,7 +661,7 @@ function ClientBillingCompact({
             value={isCompany ? t("onboarding.personaJuridica") : t("onboarding.personaFisica")}
           />
           <Field
-            label={isCompany ? t("onboarding.razonSocial") : "Nombre fiscal"}
+            label={isCompany ? t("onboarding.razonSocial") : t("clientDetail.nombreFiscal")}
             value={displayName}
           />
           <Field
@@ -788,7 +789,7 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
   const [opened, setOpened] = useState(false);
   const dateStr = day?.date && !isNaN(new Date(day.date).getTime())
     ? new Date(day.date).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })
-    : "Sin fecha";
+    : t("clientDetail.sinFecha");
   const meals: any[] = Array.isArray(day?.meals) ? day.meals : [];
   const safePct = isNaN(percentage) ? 0 : percentage;
   const pt = day?.plan_totals;
@@ -4970,7 +4971,7 @@ export function ClientDetailPage() {
                   date: log.created_at || log.date,
                   type: "workout" as const,
                   title: t("clientDetail.entrenamientoRegistrado"),
-                  desc: log.program_name || "Sesión de entrenamiento",
+                  desc: log.program_name || i18next.t("clientDetail.sesionDeEntrenamiento"),
                 })),
                 ...(clientNutritionLogs?.logs || []).flatMap((day: any) =>
                   (day.meals || []).map((meal: any) => ({

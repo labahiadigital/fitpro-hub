@@ -27,26 +27,27 @@ import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 const BEVERAGE_CATEGORIES = [
-  { value: "", label: "Todas las categorías" },
-  { value: "Aguas e Infusiones", label: "Aguas e Infusiones" },
-  { value: "Café", label: "Café" },
-  { value: "Té e Infusiones", label: "Té e Infusiones" },
-  { value: "Lácteos", label: "Lácteos" },
-  { value: "Lácteos / Fermentados", label: "Lácteos / Fermentados" },
-  { value: "Lácteos / Dulces", label: "Lácteos / Dulces" },
-  { value: "Bebidas Vegetales", label: "Bebidas Vegetales" },
-  { value: "Zumos de Fruta", label: "Zumos de Fruta" },
-  { value: "Refrescos", label: "Refrescos" },
-  { value: "Bebidas Light / Zero", label: "Bebidas Light / Zero" },
-  { value: "Bebidas Energéticas", label: "Bebidas Energéticas" },
-  { value: "Bebidas Isotónicas", label: "Bebidas Isotónicas" },
-  { value: "Suplementos Deportivos", label: "Suplementos Deportivos" },
-  { value: "Bebidas de Cacao", label: "Bebidas de Cacao" },
-  { value: "Bebidas Tradicionales", label: "Bebidas Tradicionales" },
-  { value: "Fermentados", label: "Fermentados" },
-  { value: "Bebidas Alcohólicas", label: "Bebidas Alcohólicas" },
+  { value: "", label: i18next.t("nutrition.todasLasCategorias") },
+  { value: "Aguas e Infusiones", label: i18next.t("beverages.aguasEInfusiones") },
+  { value: "Café", label: i18next.t("beverages.cafe") },
+  { value: "Té e Infusiones", label: i18next.t("beverages.teEInfusiones") },
+  { value: "Lácteos", label: i18next.t("beverages.lacteos") },
+  { value: "Lácteos / Fermentados", label: i18next.t("beverages.lacteosYFermentados") },
+  { value: "Lácteos / Dulces", label: i18next.t("beverages.lacteosYDulces") },
+  { value: "Bebidas Vegetales", label: i18next.t("beverages.bebidasVegetales") },
+  { value: "Zumos de Fruta", label: i18next.t("beverages.zumosDeFruta") },
+  { value: "Refrescos", label: i18next.t("beverages.refrescos") },
+  { value: "Bebidas Light / Zero", label: i18next.t("beverages.bebidasLightZero") },
+  { value: "Bebidas Energéticas", label: i18next.t("beverages.bebidasEnergeticas") },
+  { value: "Bebidas Isotónicas", label: i18next.t("beverages.bebidasIsotonicas") },
+  { value: "Suplementos Deportivos", label: i18next.t("beverages.suplementosDeportivos") },
+  { value: "Bebidas de Cacao", label: i18next.t("beverages.bebidasDeCacao") },
+  { value: "Bebidas Tradicionales", label: i18next.t("beverages.bebidasTradicionales") },
+  { value: "Fermentados", label: i18next.t("beverages.fermentados") },
+  { value: "Bebidas Alcohólicas", label: i18next.t("beverages.bebidasAlcoholicas") },
 ];
 
 export function BeveragesTab() {

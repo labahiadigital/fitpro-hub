@@ -483,7 +483,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
         {/* Workspace section */}
         <Box px="xs" py="xs">
           <Text c="dimmed" size="10px" fw={700} tt="uppercase" px="xs" pb={4} style={{ letterSpacing: "0.1em" }}>
-            {workspaces.length > 1 ? "Tus espacios" : "Espacio actual"}
+            {workspaces.length > 1 ? t("layout.tusEspacios") : t("layout.espacioActual")}
           </Text>
 
           <Stack gap={2}>

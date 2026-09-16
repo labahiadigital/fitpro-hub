@@ -38,15 +38,16 @@ import {
   useUpdateCampaignTemplate,
 } from "../../hooks/useClientSegments";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 const SEGMENT_OPTIONS = [
-  { value: "abandoned_cart", label: "Carrito abandonado" },
+  { value: "abandoned_cart", label: i18next.t("emailTemplates.carritoAbandonado") },
   { value: "inactive", label: "Inactivos (cancelados)" },
   { value: "custom", label: "Personalizada" },
 ];
 
 const DISCOUNT_TYPE_OPTIONS = [
-  { value: "", label: "Sin descuento" },
+  { value: "", label: i18next.t("emailTemplates.sinDescuento") },
   { value: "percent", label: "% Porcentaje" },
   { value: "amount", label: "€ Importe fijo" },
 ];
@@ -90,8 +91,8 @@ export function EmailTemplatesPage() {
     initialValues: INITIAL_VALUES,
     validate: {
       name: (v) => (v.length < 2 ? t("emailTemplatesPage.nombreRequerido") : null),
-      subject: (v) => (v.length < 2 ? "Asunto requerido" : null),
-      body_html: (v) => (v.length < 5 ? "Cuerpo requerido" : null),
+      subject: (v) => (v.length < 2 ? t("emailTemplates.asuntoRequerido") : null),
+      body_html: (v) => (v.length < 5 ? t("emailTemplates.cuerpoRequerido") : null),
     },
   });
 
@@ -288,7 +289,7 @@ export function EmailTemplatesPage() {
           form.reset();
         }}
         size="lg"
-        title={editingId ? "Editar plantilla" : "Nueva plantilla"}
+        title={editingId ? t("emailTemplates.editarPlantilla") : t("emailTemplates.nuevaPlantilla")}
         radius="lg"
       >
         <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -376,7 +377,7 @@ export function EmailTemplatesPage() {
                   },
                 }}
               >
-                {editingId ? t("emailTemplatesPage.guardarCambios") : "Crear plantilla"}
+                {editingId ? t("emailTemplatesPage.guardarCambios") : t("emailTemplates.crearPlantilla")}
               </Button>
             </Group>
           </Stack>

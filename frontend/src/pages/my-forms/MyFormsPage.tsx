@@ -215,7 +215,7 @@ function FormRespondCard({ item }: FormRespondCardProps) {
         answers: values,
       });
       notifications.show({
-        title: "Formulario enviado",
+        title: t("myForms.formularioEnviado"),
         message: t("myForms.tu_respuesta_se_ha_registrado_correctamente"),
         color: "green",
       });

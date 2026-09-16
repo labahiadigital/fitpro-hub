@@ -50,7 +50,7 @@ export function TemplatesTab({
             <Badge color="teal" variant="light" radius="md" size="xs" mb="xs">{"Plantilla"}</Badge>
 
             <Text c="dimmed" lineClamp={2} size="xs">
-              {program.description || "Sin descripción"}
+              {program.description || t("common.sinDescripcion")}
             </Text>
 
             <Group gap={4} mt="sm">

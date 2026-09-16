@@ -269,8 +269,8 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
                             variant="light"
                             title={
                               r.status === "submitted"
-                                ? "Ver respuesta"
-                                : "Ver detalles"
+                                ? t("clientForms.verRespuesta")
+                                : t("clientForms.verDetalles")
                             }
                             onClick={() => {
                               setViewingSubmission(r);

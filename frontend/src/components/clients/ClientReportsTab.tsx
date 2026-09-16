@@ -68,7 +68,7 @@ export function ClientReportsTab({ clientId }: Props) {
       clientsApi.createReport(clientId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-reports", clientId] });
-      notifications.show({ title: "Reporte creado", message: t("clientReports.el_reporte_se_ha_guardado_correctamente"), color: "green" });
+      notifications.show({ title: t("clientReports.reporteCreado"), message: t("clientReports.el_reporte_se_ha_guardado_correctamente"), color: "green" });
       close();
       form.reset();
     },
@@ -79,7 +79,7 @@ export function ClientReportsTab({ clientId }: Props) {
       clientsApi.updateReport(clientId, reportId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-reports", clientId] });
-      notifications.show({ title: "Reporte actualizado", message: t("clientReports.los_cambios_se_han_guardado"), color: "green" });
+      notifications.show({ title: t("clientReports.reporteActualizado"), message: t("clientReports.los_cambios_se_han_guardado"), color: "green" });
       close();
       form.reset();
       setEditId(null);
@@ -90,7 +90,7 @@ export function ClientReportsTab({ clientId }: Props) {
     mutationFn: (reportId: string) => clientsApi.deleteReport(clientId, reportId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-reports", clientId] });
-      notifications.show({ title: "Reporte eliminado", message: t("clientReports.el_reporte_ha_sido_eliminado"), color: "blue" });
+      notifications.show({ title: t("clientReports.reporteEliminado"), message: t("clientReports.el_reporte_ha_sido_eliminado"), color: "blue" });
     },
   });
 
@@ -200,7 +200,7 @@ export function ClientReportsTab({ clientId }: Props) {
       <Modal
         opened={opened}
         onClose={close}
-        title={editId ? "Editar reporte" : t("clientReportsTab.nuevoReporteDeRevisión")}
+        title={editId ? t("clientReports.editarReporte") : t("clientReportsTab.nuevoReporteDeRevisión")}
         size="lg"
       >
         <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -233,7 +233,7 @@ export function ClientReportsTab({ clientId }: Props) {
                 type="submit"
                 loading={createMutation.isPending || updateMutation.isPending}
               >
-                {editId ? "Guardar cambios" : "Crear reporte"}
+                {editId ? t("common.guardarCambios") : t("clientReports.crearReporte")}
               </Button>
             </Group>
           </Stack>

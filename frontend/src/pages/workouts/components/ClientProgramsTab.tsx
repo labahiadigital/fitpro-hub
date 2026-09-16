@@ -63,7 +63,7 @@ export function ClientProgramsTab({
               </Group>
 
               <Text c="dimmed" lineClamp={2} size="xs">
-                {program.description || "Sin descripción"}
+                {program.description || t("common.sinDescripcion")}
               </Text>
 
               {program.client_id && (

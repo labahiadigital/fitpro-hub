@@ -159,7 +159,7 @@ function WeeklyScheduleSection({
     },
     onSuccess: (res) => {
       setWorkspace(res.data);
-      notifications.show({ title: "Horario guardado", message: t("settings.tu_disponibilidad_semanal_ha_sido_actualizada"), color: "green" });
+      notifications.show({ title: t("settings.horarioGuardado"), message: t("settings.tu_disponibilidad_semanal_ha_sido_actualizada"), color: "green" });
     },
     onError: () => {
       notifications.show({ title: "Error", message: t("settings.no_se_pudo_guardar"), color: "red" });

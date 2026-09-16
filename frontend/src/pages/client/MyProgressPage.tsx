@@ -450,9 +450,9 @@ function UploadPhotoModal({
             value={photoType}
             onChange={setPhotoType}
             data={[
-              { value: "front", label: "Frontal" },
-              { value: "back", label: "Espalda" },
-              { value: "side", label: "Lateral" },
+              { value: "front", label: t("myProgress.frontal") },
+              { value: "back", label: t("myProgress.espalda") },
+              { value: "side", label: t("myProgress.lateral") },
             ]}
             styles={{ root: { height: 44 }, label: { height: 40, lineHeight: "40px", fontWeight: 600 } }}
           />
@@ -469,7 +469,7 @@ function UploadPhotoModal({
               radius="xl"
               styles={{ root: { height: 48 } }}
             >
-              {file ? file.name : "Seleccionar imagen"}
+              {file ? file.name : t("myProgress.seleccionarImagen")}
             </Button>
           )}
         </FileButton>
@@ -477,7 +477,7 @@ function UploadPhotoModal({
         {preview && (
           <Image
             src={preview}
-            alt="Vista previa"
+            alt={t("myProgress.vistaPrevia")}
             radius="md"
             h={180}
             fit="contain"

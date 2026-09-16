@@ -196,7 +196,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
                 {"Trackfiz"}
               </Text>
               <Text c="dimmed" size="xs" fw={500}>
-                {currentWorkspace?.name || "Espacio de trabajo"}
+                {currentWorkspace?.name || t("layout.espacioDeTrabajo")}
               </Text>
             </Box>
           )}

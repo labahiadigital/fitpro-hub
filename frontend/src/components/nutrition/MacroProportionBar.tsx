@@ -1,6 +1,7 @@
 import { Badge, Box, Group, NumberInput, Stack, Text, Tooltip } from "@mantine/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 export interface MacroPct {
   protein: number;
@@ -18,12 +19,12 @@ interface MacroProportionBarProps {
 
 // Presets comunes utilizados en nutrición deportiva.
 const PRESETS: Array<{ label: string; value: MacroPct; description: string }> = [
-  { label: "Equilibrado", value: { protein: 30, carbs: 40, fat: 30 }, description: "Balance general" },
-  { label: "Alto en proteína", value: { protein: 40, carbs: 35, fat: 25 }, description: "Definición / fuerza" },
-  { label: "Volumen", value: { protein: 25, carbs: 55, fat: 20 }, description: "Ganancia muscular" },
-  { label: "Low-carb", value: { protein: 35, carbs: 20, fat: 45 }, description: "Baja en carbos" },
-  { label: "Cetogénica", value: { protein: 25, carbs: 5, fat: 70 }, description: "Keto" },
-  { label: "Mediterránea", value: { protein: 20, carbs: 50, fat: 30 }, description: "Estilo mediterráneo" },
+  { label: i18next.t("macros.equilibrado"), value: { protein: 30, carbs: 40, fat: 30 }, description: i18next.t("macros.balanceGeneral") },
+  { label: i18next.t("macros.altoEnProteina"), value: { protein: 40, carbs: 35, fat: 25 }, description: i18next.t("macros.definicionFuerza") },
+  { label: i18next.t("macros.volumen"), value: { protein: 25, carbs: 55, fat: 20 }, description: i18next.t("macros.gananciaMuscular") },
+  { label: i18next.t("macros.lowCarb"), value: { protein: 35, carbs: 20, fat: 45 }, description: i18next.t("macros.bajaEnCarbos") },
+  { label: i18next.t("macros.cetogenica"), value: { protein: 25, carbs: 5, fat: 70 }, description: "Keto" },
+  { label: i18next.t("macros.mediterranea"), value: { protein: 20, carbs: 50, fat: 30 }, description: i18next.t("macros.estiloMediterraneo") },
 ];
 
 const MIN = 5;

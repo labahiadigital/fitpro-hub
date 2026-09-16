@@ -75,6 +75,7 @@ import { useClients } from "../../hooks/useClients";
 import { useProducts, type Product } from "../../hooks/useProducts";
 import { formatDecimal } from "../../utils/format";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 interface FormField {
   id: string;
@@ -123,16 +124,16 @@ interface Document {
 }
 
 const fieldTypes = [
-  { value: "text", label: "Texto corto", icon: IconTextSize },
-  { value: "textarea", label: "Texto largo", icon: IconFileText },
+  { value: "text", label: i18next.t("forms.textoCorto"), icon: IconTextSize },
+  { value: "textarea", label: i18next.t("forms.textoLargo"), icon: IconFileText },
   { value: "number", label: "Número", icon: IconNumber },
   { value: "email", label: "Email", icon: IconMail },
   { value: "phone", label: "Teléfono", icon: IconPhone },
   { value: "date", label: "Fecha", icon: IconCalendar },
   { value: "select", label: "Desplegable", icon: IconList },
-  { value: "multiselect", label: "Desplegable múltiple", icon: IconList },
+  { value: "multiselect", label: i18next.t("forms.desplegableMultiple"), icon: IconList },
   { value: "checkbox", label: "Casillas", icon: IconCheckbox },
-  { value: "radio", label: "Opción única", icon: IconList },
+  { value: "radio", label: i18next.t("forms.opcionUnica"), icon: IconList },
 ];
 
 export function FormsPage() {
@@ -525,7 +526,7 @@ export function FormsPage() {
         data: { is_required: !currentValue },
       });
       notifications.show({
-        title: !currentValue ? "Formulario obligatorio" : "Formulario opcional",
+        title: !currentValue ? t("forms.formularioObligatorio") : t("forms.formularioOpcional"),
         message: !currentValue
           ? t("formsPage.losClientesVeránUnaNotificaciónPers")
           : "El formulario ya no es obligatorio.",

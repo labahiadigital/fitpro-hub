@@ -50,6 +50,7 @@ import { BottomSheet } from "../../components/common/BottomSheet";
 import { useLiveClasses, useLiveClassStats } from "../../hooks/useLiveClasses";
 import { useTranslation } from "react-i18next";
 
+
 // Tipos
 interface LiveClass {
   id: string;
@@ -85,18 +86,18 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
   };
 
   const statusLabels: Record<string, string> = {
-    draft: "Borrador",
-    scheduled: "Programada",
-    live: "En vivo",
-    completed: "Finalizada",
-    cancelled: "Cancelada",
+    draft: t("liveClasses.borrador"),
+    scheduled: t("liveClasses.programada"),
+    live: t("liveClasses.enVivo"),
+    completed: t("liveClasses.finalizada"),
+    cancelled: t("liveClasses.cancelada"),
   };
 
   const difficultyLabels: Record<string, string> = {
-    beginner: "Principiante",
-    intermediate: "Intermedio",
-    advanced: "Avanzado",
-    all: "Todos los niveles",
+    beginner: t("liveClasses.principiante"),
+    intermediate: t("liveClasses.intermedio"),
+    advanced: t("liveClasses.avanzado"),
+    all: t("liveClasses.todosLosNiveles"),
   };
 
   const typeLabels: Record<string, string> = {
@@ -270,11 +271,11 @@ function ClassRow({ liveClass }: { liveClass: LiveClass }) {
   };
 
   const statusLabels: Record<string, string> = {
-    draft: "Borrador",
-    scheduled: "Programada",
-    live: "En vivo",
-    completed: "Finalizada",
-    cancelled: "Cancelada",
+    draft: t("liveClasses.borrador"),
+    scheduled: t("liveClasses.programada"),
+    live: t("liveClasses.enVivo"),
+    completed: t("liveClasses.finalizada"),
+    cancelled: t("liveClasses.cancelada"),
   };
 
   return (
@@ -463,7 +464,7 @@ function CreateClassModal({
             <Select
               label={t("liveClasses.nivelDeDificultad")}
               data={[
-                { value: "all", label: "Todos los niveles" },
+                { value: "all", label: t("liveClasses.todosLosNiveles") },
                 { value: "beginner", label: "Principiante" },
                 { value: "intermediate", label: "Intermedio" },
                 { value: "advanced", label: "Avanzado" },

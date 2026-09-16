@@ -45,35 +45,36 @@ import { ExerciseFormModal } from "./components/ExerciseFormModal";
 import { ProgramBuilderSidebar } from "./components/ProgramBuilderSidebar";
 import { ViewProgramModal } from "./components/ViewProgramModal";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 const CATEGORY_TAB_CONFIGS = {
   warmup: { category: "calentamiento", placeholder: "Buscar ejercicios de calentamiento...", gradient: "rgba(255, 107, 0, 0.2)", icon: <IconFlame color="var(--mantine-color-orange-6)" size={28} />, color: "orange", emptyTitle: "No hay ejercicios de calentamiento", emptyDesc: "Añade ejercicios de calentamiento a tu biblioteca.", emptyLabel: "Añadir Calentamiento", emptyIcon: <IconFlame size={36} /> },
-  stretching: { category: "estiramiento", placeholder: "Buscar estiramientos...", gradient: "rgba(34, 197, 94, 0.2)", icon: <IconStretching color="var(--mantine-color-green-6)" size={28} />, color: "green", emptyTitle: "No hay estiramientos", emptyDesc: "Añade ejercicios de estiramiento a tu biblioteca.", emptyLabel: "Añadir Estiramiento", emptyIcon: <IconStretching size={36} /> },
+  stretching: { category: "estiramiento", placeholder: i18next.t("workouts.buscarEstiramientos"), gradient: "rgba(34, 197, 94, 0.2)", icon: <IconStretching color="var(--mantine-color-green-6)" size={28} />, color: "green", emptyTitle: i18next.t("workouts.noHayEstiramientos"), emptyDesc: i18next.t("workouts.anadeEstiramientos"), emptyLabel: i18next.t("workouts.anadirEstiramiento"), emptyIcon: <IconStretching size={36} /> },
   cardio: { category: "cardio", placeholder: "Buscar ejercicios de cardio...", gradient: "rgba(239, 68, 68, 0.2)", icon: <IconHeartbeat color="var(--mantine-color-red-6)" size={28} />, color: "red", emptyTitle: "No hay ejercicios de cardio", emptyDesc: "Añade ejercicios aeróbicos y de cardio a tu biblioteca.", emptyLabel: "Añadir Cardio", emptyIcon: <IconHeartbeat size={36} /> },
 } as const;
 
 const muscleGroups = [
-  { value: "pecho", label: "Pecho" },
-  { value: "espalda", label: "Espalda" },
-  { value: "hombros", label: "Hombros" },
-  { value: "bíceps", label: "Bíceps" },
-  { value: "tríceps", label: "Tríceps" },
-  { value: "cuádriceps", label: "Cuádriceps" },
-  { value: "isquiotibiales", label: "Isquiotibiales" },
-  { value: "glúteos", label: "Glúteos" },
+  { value: "pecho", label: i18next.t("muscles.pecho") },
+  { value: "espalda", label: i18next.t("muscles.espalda") },
+  { value: "hombros", label: i18next.t("muscles.hombrosSimple") },
+  { value: "bíceps", label: i18next.t("muscles.biceps") },
+  { value: "tríceps", label: i18next.t("muscles.triceps") },
+  { value: "cuádriceps", label: i18next.t("muscles.cuadriceps") },
+  { value: "isquiotibiales", label: i18next.t("muscles.isquiotibiales") },
+  { value: "glúteos", label: i18next.t("muscles.gluteos") },
   { value: "core", label: "Core" },
   { value: "cardio", label: "Cardio" },
 ];
 
 const equipmentOptions = [
-  { value: "ninguno", label: "Sin equipo" },
+  { value: "ninguno", label: i18next.t("workouts.sinEquipo") },
   { value: "mancuernas", label: "Mancuernas" },
   { value: "barra", label: "Barra" },
   { value: "kettlebell", label: "Kettlebell" },
-  { value: "bandas", label: "Bandas elásticas" },
+  { value: "bandas", label: i18next.t("workouts.bandasElasticas") },
   { value: "máquina", label: "Máquina" },
   { value: "banco", label: "Banco" },
-  { value: "barra de dominadas", label: "Barra de dominadas" },
+  { value: "barra de dominadas", label: i18next.t("workouts.barraDeDominadas") },
 ];
 
 export function WorkoutsPage() {

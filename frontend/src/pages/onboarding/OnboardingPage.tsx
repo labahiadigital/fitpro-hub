@@ -43,28 +43,29 @@ import {
 } from "../../constants/allergens";
 import "dayjs/locale/es";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 const ALLERGENS = ALLERGENS_SELECT_DATA;
 const INTOLERANCES = INTOLERANCES_SELECT_DATA;
 
 // Niveles de actividad
 const ACTIVITY_LEVELS = [
-  { value: "sedentary", label: "Sedentario", description: "Poco o nada de ejercicio" },
-  { value: "light", label: "Ligero", description: "Ejercicio 1-3 días/semana" },
-  { value: "moderate", label: "Moderado", description: "Ejercicio 3-5 días/semana" },
-  { value: "active", label: "Activo", description: "Ejercicio 6-7 días/semana" },
-  { value: "very_active", label: "Muy activo", description: "Ejercicio intenso diario" },
+  { value: "sedentary", label: i18next.t("onboarding.sedentario"), description: i18next.t("onboarding.pocoONada") },
+  { value: "light", label: i18next.t("onboarding.ligero"), description: i18next.t("onboarding.ejercicio1a3") },
+  { value: "moderate", label: i18next.t("onboarding.moderado"), description: i18next.t("onboarding.ejercicio3a5") },
+  { value: "active", label: i18next.t("onboarding.activo"), description: i18next.t("onboarding.ejercicio6a7") },
+  { value: "very_active", label: i18next.t("onboarding.muyActivo"), description: i18next.t("onboarding.ejercicioIntensoDiario") },
 ];
 
 // Objetivos fitness
 const FITNESS_GOALS = [
-  { value: "weight_loss", label: "Pérdida de peso", description: "Reducir grasa corporal" },
-  { value: "muscle_gain", label: "Ganancia muscular", description: "Aumentar masa muscular" },
-  { value: "maintenance", label: "Mantenimiento", description: "Mantener mi estado actual" },
-  { value: "endurance", label: "Resistencia", description: "Mejorar capacidad cardiovascular" },
-  { value: "strength", label: "Fuerza", description: "Aumentar fuerza máxima" },
-  { value: "flexibility", label: "Flexibilidad", description: "Mejorar movilidad y flexibilidad" },
-  { value: "general_health", label: "Salud general", description: "Mejorar mi bienestar" },
+  { value: "weight_loss", label: i18next.t("onboarding.perdidaDePeso"), description: i18next.t("onboarding.reducirGrasaCorporal") },
+  { value: "muscle_gain", label: i18next.t("onboarding.gananciaMuscular"), description: i18next.t("onboarding.aumentarMasaMuscular") },
+  { value: "maintenance", label: i18next.t("onboarding.mantenimiento"), description: i18next.t("onboarding.mantenerEstado") },
+  { value: "endurance", label: i18next.t("onboarding.resistencia"), description: i18next.t("onboarding.mejorarCapacidadCardio") },
+  { value: "strength", label: i18next.t("onboarding.fuerza"), description: i18next.t("onboarding.aumentarFuerzaMaxima") },
+  { value: "flexibility", label: i18next.t("onboarding.flexibilidad"), description: i18next.t("onboarding.mejorarMovilidad") },
+  { value: "general_health", label: i18next.t("onboarding.saludGeneral"), description: i18next.t("onboarding.mejorarMiBienestar") },
 ];
 
 export function OnboardingPage() {
@@ -448,9 +449,9 @@ function StepPersonalInfo({ form }: { form: any }) {
         <SegmentedControl
           fullWidth
           data={[
-            { label: "Masculino", value: "male" },
-            { label: "Femenino", value: "female" },
-            { label: "Otro", value: "other" },
+            { label: t("common.masculino"), value: "male" },
+            { label: t("common.femenino"), value: "female" },
+            { label: t("common.otroGenero"), value: "other" },
           ]}
           styles={{
             root: {

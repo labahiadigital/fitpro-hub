@@ -31,6 +31,7 @@ import {
 import { useState } from "react";
 import { BottomSheet } from "../common/BottomSheet";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 // Types
 interface Permission {
@@ -54,32 +55,32 @@ interface CustomRole {
 const AVAILABLE_PERMISSIONS: Permission[] = [
   {
     resource: "clients",
-    description: "Gestión de clientes",
+    description: i18next.t("team.gestionDeClientes"),
     actions: ["create", "read", "update", "delete"],
   },
   {
     resource: "workouts",
-    description: "Programas de entrenamiento",
+    description: i18next.t("team.programasDeEntrenamiento"),
     actions: ["create", "read", "update", "delete"],
   },
   {
     resource: "nutrition",
-    description: "Planes nutricionales",
+    description: i18next.t("team.planesNutricionales"),
     actions: ["create", "read", "update", "delete"],
   },
   {
     resource: "calendar",
-    description: "Calendario y reservas",
+    description: i18next.t("team.calendarioYReservas"),
     actions: ["create", "read", "update", "delete"],
   },
   {
     resource: "payments",
-    description: "Pagos y facturación",
+    description: i18next.t("team.pagosYFacturacion"),
     actions: ["create", "read", "update", "delete"],
   },
   {
     resource: "team",
-    description: "Gestión de equipo",
+    description: i18next.t("team.gestionDeEquipo"),
     actions: ["create", "read", "update", "delete"],
   },
   {
@@ -89,12 +90,12 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
   },
   {
     resource: "reports",
-    description: "Informes y analíticas",
+    description: i18next.t("team.informesYAnaliticas"),
     actions: ["read"],
   },
   {
     resource: "chat",
-    description: "Chat y mensajería",
+    description: i18next.t("team.chatYMensajeria"),
     actions: ["read", "send"],
   },
   {

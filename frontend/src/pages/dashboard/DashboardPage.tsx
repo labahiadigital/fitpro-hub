@@ -407,7 +407,7 @@ function TrainingStats({
     const { t } = useTranslation();
     const stats = [
     {
-      label: "Sesiones Pendientes",
+      label: t("dashboard.sesionesPendientes"),
       value: kpis?.upcoming_sessions?.toString() || "0",
       icon: IconCalendarEvent,
       color: "blue",
@@ -425,7 +425,7 @@ function TrainingStats({
       color: "orange",
     },
     {
-      label: "Ingresos mes",
+      label: t("dashboard.ingresosMes"),
       value: `€${formatDecimal(kpis?.revenue_this_month || 0, 0)}`,
       icon: IconTarget,
       color: "green",
@@ -596,19 +596,19 @@ function ClientMetricsWidget({
 
   const metrics = [
     {
-      label: "Ingresos recurrentes (MRR)",
+      label: t("dashboard.ingresosRecurrentesMRR"),
       value: `€${formatDecimal(kpis?.mrr || 0, 2)}`,
       icon: IconWeight,
       trend: `${Number(revenueChange) >= 0 ? "+" : ""}${revenueChange}%`,
     },
     {
-      label: "Ingreso por cliente (ARPA)",
+      label: t("dashboard.ingresoPorClienteARPA"),
       value: `€${formatDecimal(kpis?.arpa || 0, 2)}`,
       icon: IconRun,
       trend: "N/A",
     },
     {
-      label: "Tasa Abandono",
+      label: t("dashboard.tasaAbandono"),
       value: `${formatDecimal(kpis?.churn_rate || 0, 1)}%`,
       icon: IconHeartbeat,
       trend: `${(kpis?.churn_rate || 0) <= 5 ? "Excelente" : "Revisar"}`,

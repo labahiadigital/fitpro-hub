@@ -72,6 +72,7 @@ import { useMachines } from "../../hooks/useMachines";
 import { useNavigate } from "react-router-dom";
 import "dayjs/locale/es";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 dayjs.locale("es");
 
@@ -105,11 +106,11 @@ interface CalendarEvent {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  confirmed: { label: "Confirmada", color: "green" },
-  pending: { label: "Pendiente", color: "yellow" },
-  cancelled: { label: "Cancelada", color: "red" },
-  completed: { label: "Completada", color: "blue" },
-  no_show: { label: "No asistió", color: "gray" },
+  confirmed: { label: i18next.t("calendar.confirmada"), color: "green" },
+  pending: { label: i18next.t("calendar.pendiente"), color: "yellow" },
+  cancelled: { label: i18next.t("calendar.cancelada"), color: "red" },
+  completed: { label: i18next.t("calendar.completada"), color: "blue" },
+  no_show: { label: i18next.t("calendar.noAsistio"), color: "gray" },
 };
 
 export function CalendarPage() {

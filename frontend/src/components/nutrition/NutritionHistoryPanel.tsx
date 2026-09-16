@@ -19,6 +19,7 @@ import {
 import { useState } from "react";
 import type { NutritionCalculationEntry } from "../../hooks/useClients";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 interface NutritionHistoryPanelProps {
   history: NutritionCalculationEntry[];
@@ -31,13 +32,13 @@ const ACTIVITY_LABELS: Record<string, string> = {
   light: "Ligero",
   moderate: "Moderado",
   active: "Activo",
-  very_active: "Muy activo",
+  very_active: i18next.t("nutrition.muyActivo"),
 };
 
 const GOAL_LABELS: Record<string, string> = {
-  fat_loss: "Pérdida de grasa",
+  fat_loss: i18next.t("nutrition.perdidaDeGrasa"),
   maintenance: "Mantenimiento",
-  muscle_gain: "Ganancia muscular",
+  muscle_gain: i18next.t("nutrition.gananciaMuscular"),
 };
 
 const FORMULA_LABELS: Record<string, string> = {

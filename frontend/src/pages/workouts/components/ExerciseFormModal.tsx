@@ -121,7 +121,7 @@ function ExerciseAlternativesSection({
                     { exerciseId, alternativeExerciseId: e.id },
                     {
                       onSuccess: () => {
-                        notifications.show({ title: "Alternativa añadida", message: `${e.name} añadido como alternativa`, color: "green" });
+                        notifications.show({ title: t("exercises.alternativaAnadida"), message: t("exercises.anadidoComoAlternativa", { name: e.name }), color: "green" });
                         setSearch("");
                       },
                     }

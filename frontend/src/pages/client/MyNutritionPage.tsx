@@ -1071,7 +1071,7 @@ function LogPlanMealModal({
           radius="xl"
           styles={{ root: { height: 48, fontWeight: 700 } }}
         >
-          {existingLog ? "Guardar cambios" : "Registrar"} ({Math.round(totalMacros.calories)} kcal)
+          {existingLog ? t("common.guardarCambios") : t("myNutrition.registrar")} ({Math.round(totalMacros.calories)} kcal)
         </Button>
       }
     >
@@ -1512,7 +1512,7 @@ function NutritionDayDetail({
                         </Group>
                         <Text size="xs" c="dimmed">
                           {(() => {
-                            if (meal.is_free_meal) return "Comida libre";
+                            if (meal.is_free_meal) return t("myNutrition.comidaLibre");
                             const recipeNames = new Set(mealFoods.filter((f: PlanMealFoodItem) => f.recipe_group).map((f: PlanMealFoodItem) => f.recipe_group));
                             const ungroupedCount = mealFoods.filter((f: PlanMealFoodItem) => !f.recipe_group).length;
                             const parts: string[] = [];

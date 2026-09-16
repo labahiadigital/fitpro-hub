@@ -62,6 +62,7 @@ import {
   passwordValidator,
 } from "../../components/common/PasswordRulesIndicator";
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 
 interface SubscriptionPayment {
   id: string;
@@ -118,18 +119,18 @@ const intervalLabels: Record<string, string> = {
 };
 
 const statusConfig: Record<string, { label: string; color: string }> = {
-  active: { label: "Activa", color: "green" },
-  past_due: { label: "Pago pendiente", color: "orange" },
-  cancelled: { label: "Cancelada", color: "red" },
-  trialing: { label: "Periodo de prueba", color: "blue" },
-  paused: { label: "Pausada", color: "gray" },
+  active: { label: i18next.t("myProfile.activa"), color: "green" },
+  past_due: { label: i18next.t("myProfile.pagoPendiente"), color: "orange" },
+  cancelled: { label: i18next.t("myProfile.cancelada"), color: "red" },
+  trialing: { label: i18next.t("myProfile.periodoDePrueba"), color: "blue" },
+  paused: { label: i18next.t("myProfile.pausadaGray"), color: "gray" },
 };
 
 const paymentStatusConfig: Record<string, { label: string; color: string }> = {
-  succeeded: { label: "Pagado", color: "green" },
-  pending: { label: "Pendiente", color: "yellow" },
-  failed: { label: "Fallido", color: "red" },
-  refunded: { label: "Devuelto", color: "gray" },
+  succeeded: { label: i18next.t("myProfile.pagado"), color: "green" },
+  pending: { label: i18next.t("myProfile.pendiente"), color: "yellow" },
+  failed: { label: i18next.t("myProfile.fallido"), color: "red" },
+  refunded: { label: i18next.t("myProfile.devuelto"), color: "gray" },
 };
 
 async function _downloadBlob(blob: Blob, filename: string): Promise<void> {
@@ -399,7 +400,7 @@ function SubscriptionSection() {
                   return (
                     <Table.Tr key={p.id}>
                       <Table.Td>{formatDate(p.paid_at || p.created_at)}</Table.Td>
-                      <Table.Td>{p.description || "Pago de suscripción"}</Table.Td>
+                      <Table.Td>{p.description || t("myProfile.pagoDeSuscripcion")}</Table.Td>
                       <Table.Td ta="right" fw={500}>{formatCurrencyLocal(p.amount, p.currency)}</Table.Td>
                       <Table.Td ta="center">
                         <Badge size="sm" color={pConfig.color} variant="light">{pConfig.label}</Badge>
@@ -598,51 +599,51 @@ const NOTIF_CATEGORIES: Array<{
   items: Array<{ key: string; label: string; desc: string }>;
 }> = [
   {
-    title: "Reservas y citas",
+    title: i18next.t("myProfile.reservasYCitas"),
     items: [
-      { key: "booking_created", label: "Nuevas citas", desc: "Cuando se te agenda una nueva sesión" },
-      { key: "booking_cancelled", label: "Cancelaciones", desc: "Cuando se cancela una de tus citas" },
-      { key: "booking_modified", label: "Modificaciones", desc: "Cuando se modifica una cita existente" },
-      { key: "booking_reminder", label: "Recordatorios", desc: "Recordatorio antes de tus citas" },
+      { key: "booking_created", label: i18next.t("myProfile.nuevasCitas"), desc: i18next.t("myProfile.cuandoSeTeAgendaSesion") },
+      { key: "booking_cancelled", label: i18next.t("myProfile.cancelaciones"), desc: i18next.t("myProfile.cuandoSeCancelaCita") },
+      { key: "booking_modified", label: i18next.t("myProfile.modificaciones"), desc: i18next.t("myProfile.cuandoSeModificaCita") },
+      { key: "booking_reminder", label: i18next.t("myProfile.recordatorios"), desc: i18next.t("myProfile.recordatorioAntesCitas") },
     ],
   },
   {
-    title: "Seguimiento y progreso",
+    title: i18next.t("myProfile.seguimientoYProgreso"),
     items: [
-      { key: "progress_registered", label: "Registro de progreso", desc: "Confirmación al registrar tu progreso" },
-      { key: "milestone_reached", label: "Hitos alcanzados", desc: "Cuando alcances un objetivo importante" },
-      { key: "weekly_comparison", label: "Comparativa semanal", desc: "Resumen comparativo entre semanas" },
+      { key: "progress_registered", label: i18next.t("myProfile.registroDeProgreso"), desc: i18next.t("myProfile.confirmacionRegistrarProgreso") },
+      { key: "milestone_reached", label: i18next.t("myProfile.hitosAlcanzados"), desc: i18next.t("myProfile.cuandoAlcancesObjetivo") },
+      { key: "weekly_comparison", label: i18next.t("myProfile.comparativaSemanal"), desc: i18next.t("myProfile.resumenComparativo") },
     ],
   },
   {
-    title: "Entrenamientos y nutrición",
+    title: i18next.t("myProfile.entrenamientosYNutricion"),
     items: [
-      { key: "meal_reminder", label: "Recordatorio de comidas", desc: "Recuerda registrar tus comidas" },
-      { key: "workout_reminder", label: "Recordatorio de entreno", desc: "Recuerda realizar tu entrenamiento" },
-      { key: "supplement_alert", label: "Alerta de suplementos", desc: "Alertas sobre comidas o suplementos" },
-      { key: "plan_updated", label: "Cambios en tu plan", desc: "Cuando se actualiza tu rutina o plan" },
+      { key: "meal_reminder", label: i18next.t("myProfile.recordatorioComidas"), desc: i18next.t("myProfile.recuerdaRegistrarComidas") },
+      { key: "workout_reminder", label: i18next.t("myProfile.recordatorioEntreno"), desc: i18next.t("myProfile.recuerdaRealizarEntreno") },
+      { key: "supplement_alert", label: i18next.t("myProfile.alertaSuplementos"), desc: i18next.t("myProfile.alertasComidasSuplementos") },
+      { key: "plan_updated", label: i18next.t("myProfile.cambiosEnTuPlan"), desc: i18next.t("myProfile.cuandoSeActualizaPlan") },
     ],
   },
   {
-    title: "Pagos y facturas",
+    title: i18next.t("myProfile.pagosYFacturas"),
     items: [
-      { key: "payment_received", label: "Pagos recibidos", desc: "Confirmación al procesarse un pago" },
-      { key: "payment_invoice", label: "Facturas", desc: "Cuando se genera una factura" },
+      { key: "payment_received", label: i18next.t("myProfile.pagosRecibidos"), desc: i18next.t("myProfile.confirmacionPago") },
+      { key: "payment_invoice", label: i18next.t("myProfile.facturas"), desc: i18next.t("myProfile.cuandoSeGeneraFactura") },
     ],
   },
   {
     title: "Comunicaciones",
     items: [
-      { key: "new_message", label: "Mensajes", desc: "Cuando tu entrenador te envía un mensaje" },
-      { key: "promotion", label: "Promociones", desc: "Ofertas y promociones de tu centro" },
+      { key: "new_message", label: i18next.t("myProfile.mensajes"), desc: i18next.t("myProfile.cuandoEntrenadorEnviaMensaje") },
+      { key: "promotion", label: i18next.t("myProfile.promociones"), desc: i18next.t("myProfile.ofertasYPromociones") },
     ],
   },
   {
     title: "Documentos",
     items: [
-      { key: "form_pending", label: "Formularios pendientes", desc: "Formularios que debes completar" },
-      { key: "consent_pending", label: "Consentimientos", desc: "Consentimientos legales pendientes" },
-      { key: "survey_pending", label: "Encuestas", desc: "Encuestas de satisfacción pendientes" },
+      { key: "form_pending", label: i18next.t("myProfile.formulariosPendientes"), desc: i18next.t("myProfile.formulariosDebesCompletar") },
+      { key: "consent_pending", label: i18next.t("myProfile.consentimientos"), desc: i18next.t("myProfile.consentimientosLegales") },
+      { key: "survey_pending", label: i18next.t("myProfile.encuestas"), desc: i18next.t("myProfile.encuestasDeSatisfaccion") },
     ],
   },
 ];
@@ -748,12 +749,12 @@ function NotificationsSection() {
  * bastante descriptivos en pantallas pequeñas.
  */
 const PROFILE_TABS = [
-  { value: "datos", label: "Datos" },
-  { value: "subscription", label: "Mi suscripción y pagos" },
-  { value: "security", label: "Seguridad" },
-  { value: "email", label: "Cambiar email" },
-  { value: "notifications", label: "Notificaciones" },
-  { value: "trainer", label: "Mi entrenador" },
+  { value: "datos", label: i18next.t("myProfile.datos") },
+  { value: "subscription", label: i18next.t("myProfile.miSuscripcionYPagos") },
+  { value: "security", label: i18next.t("myProfile.seguridad") },
+  { value: "email", label: i18next.t("myProfile.cambiarEmail") },
+  { value: "notifications", label: i18next.t("myProfile.notificaciones") },
+  { value: "trainer", label: i18next.t("myProfile.miEntrenador") },
 ] as const;
 
 type ProfileTab = (typeof PROFILE_TABS)[number]["value"];
