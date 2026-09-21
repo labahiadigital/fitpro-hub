@@ -1206,9 +1206,9 @@ export function MyProgressPage() {
                           </Card.Section>
                           <Stack gap={2} mt="xs">
                             <Badge size="xs" variant="light" color="yellow">
-                              {photo.type === "front" ? "Frontal" : 
-                               photo.type === "back" ? "Espalda" : 
-                               photo.type === "side" ? "Lateral" : photo.type}
+                              {photo.type === "front" ? t("myProgress.frontal") : 
+                               photo.type === "back" ? t("myProgress.espalda") : 
+                               photo.type === "side" ? t("myProgress.lateral") : photo.type}
                             </Badge>
                           </Stack>
                         </Card>
@@ -1339,8 +1339,8 @@ export function MyProgressPage() {
         size="xl"
         title={
           enlargedPhoto
-            ? `Foto ${enlargedPhoto.type === "front" ? "Frontal" : enlargedPhoto.type === "back" ? "Espalda" : enlargedPhoto.type === "side" ? "Lateral" : enlargedPhoto.type}`
-            : "Foto"
+            ? `${t("myProgress.foto")} ${enlargedPhoto.type === "front" ? t("myProgress.frontal") : enlargedPhoto.type === "back" ? t("myProgress.espalda") : enlargedPhoto.type === "side" ? t("myProgress.lateral") : enlargedPhoto.type}`
+            : t("myProgress.foto")
         }
         centered
       >
@@ -1348,7 +1348,7 @@ export function MyProgressPage() {
           <Stack align="center" gap="md">
             <Image
               src={enlargedPhoto.url}
-              alt={`Foto ${enlargedPhoto.type}`}
+              alt={t("myProgress.foto")}
               radius="md"
               fit="contain"
               mah="70vh"

@@ -1875,7 +1875,8 @@
     "subirFotoProgreso": "Upload Progress Photo",
     "fotosEvolucion": "Progress Photos ({{count}} photos)",
     "seleccionarImagen": "Select image",
-    "vistaPrevia": "Preview"
+    "vistaPrevia": "Preview",
+    "foto": "Photo"
   },
   "myWorkouts": {
     "duracionMin": "Duration (min)",

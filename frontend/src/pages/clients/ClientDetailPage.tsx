@@ -1115,6 +1115,8 @@ export function ClientDetailPage() {
   const documents: { id: string; name: string; type: string; direction: string; created_at: string; is_read: boolean }[] = [];
   
   const [trainerPhotoFilter, setTrainerPhotoFilter] = useState<string>("all");
+  const [enlargedPhoto, setEnlargedPhoto] = useState<{ url: string; type: string; date: string } | null>(null);
+  const [enlargeOpened, { open: openEnlarge, close: closeEnlarge }] = useDisclosure(false);
   const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
   const progressPhotos = (clientPhotos || []).map((photo, index) => ({
     id: `photo-${index}`,
@@ -4226,7 +4228,21 @@ export function ClientDetailPage() {
                       <Text fw={600} size="sm" c="dimmed" mb="sm" tt="capitalize">{group.label}</Text>
                       <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 6 }} spacing="md">
                         {group.photos.map((photo) => (
-                          <Card key={photo.id} padding="xs" radius="lg" withBorder>
+                          <Card
+                            key={photo.id}
+                            padding="xs"
+                            radius="lg"
+                            withBorder
+                            style={{ cursor: "pointer" }}
+                            onClick={() => {
+                              setEnlargedPhoto({
+                                url: photo.photo_url,
+                                type: photo.photo_type,
+                                date: photo.photo_date,
+                              });
+                              openEnlarge();
+                            }}
+                          >
                             <Card.Section>
                               <Image
                                 src={photo.photo_url}
@@ -4237,7 +4253,7 @@ export function ClientDetailPage() {
                             </Card.Section>
                             <Group justify="space-between" mt="sm">
                               <Badge size="xs" variant="light" radius="xl">
-                                {photo.photo_type === "front" ? "Frontal" : photo.photo_type === "back" ? "Espalda" : "Lateral"}
+                                {photo.photo_type === "front" ? t("clientDetail.frontal") : photo.photo_type === "back" ? t("clientDetail.espalda") : t("clientDetail.lateral")}
                               </Badge>
                             </Group>
                           </Card>
@@ -6293,6 +6309,41 @@ export function ClientDetailPage() {
           onSave={handleSaveNutritionCalculation}
           isSaving={updateClient.isPending}
         />
+      </Modal>
+
+      {/* Modal para ampliar foto de progreso */}
+      <Modal
+        opened={enlargeOpened}
+        onClose={closeEnlarge}
+        size="xl"
+        title={
+          enlargedPhoto
+            ? `${t("clientDetail.foto_de_progreso")} — ${enlargedPhoto.type === "front" ? t("clientDetail.frontal") : enlargedPhoto.type === "back" ? t("clientDetail.espalda") : t("clientDetail.lateral")}`
+            : t("clientDetail.foto_de_progreso")
+        }
+        centered
+      >
+        {enlargedPhoto && (
+          <Stack align="center" gap="md">
+            <Image
+              src={enlargedPhoto.url}
+              alt={t("clientDetail.foto_de_progreso")}
+              radius="md"
+              fit="contain"
+              mah="70vh"
+              fallbackSrc="https://placehold.co/600x800?text=Foto"
+            />
+            {enlargedPhoto.date && (
+              <Text size="sm" c="dimmed">
+                {new Date(enlargedPhoto.date + "T12:00:00").toLocaleDateString(undefined, {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </Text>
+            )}
+          </Stack>
+        )}
       </Modal>
     </Container>
   );

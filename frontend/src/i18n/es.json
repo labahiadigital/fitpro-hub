@@ -1874,7 +1874,8 @@
     "subirFotoProgreso": "Subir Foto de Progreso",
     "fotosEvolucion": "Fotos de Evolución ({{count}} fotos)",
     "seleccionarImagen": "Seleccionar imagen",
-    "vistaPrevia": "Vista previa"
+    "vistaPrevia": "Vista previa",
+    "foto": "Foto"
   },
   "myWorkouts": {
     "duracionMin": "Duración (min)",
