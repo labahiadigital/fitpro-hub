@@ -1805,7 +1805,8 @@
     "cuandoSeGeneraFactura": "Quando viene generata una fattura",
     "cuandoEntrenadorEnviaMensaje": "Quando il tuo allenatore ti invia un messaggio",
     "ofertasYPromociones": "Offerte e promozioni del tuo centro",
-    "encuestasDeSatisfaccion": "Sondaggi di soddisfazione in sospeso"
+    "encuestasDeSatisfaccion": "Sondaggi di soddisfazione in sospeso",
+    "idioma": "Lingua"
   },
   "myProgress": {
     "fecha": "Data",

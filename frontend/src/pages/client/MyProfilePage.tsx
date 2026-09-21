@@ -48,6 +48,7 @@ import {
   IconPlayerPlay,
   IconFileDownload,
   IconHeartbeat,
+  IconLanguage,
   IconRefresh,
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
@@ -62,6 +63,7 @@ import {
   passwordValidator,
 } from "../../components/common/PasswordRulesIndicator";
 import { useTranslation } from "react-i18next";
+import { changeLanguage, SUPPORTED_LANGUAGES, getCurrentLanguage, type SupportedLanguage } from "../../i18n";
 import i18next from "i18next";
 
 interface SubscriptionPayment {
@@ -766,6 +768,7 @@ export function MyProfilePage() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>("datos");
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>(getCurrentLanguage());
 
   const profileForm = useForm({
     initialValues: {
@@ -1145,6 +1148,19 @@ export function MyProfilePage() {
                   placeholder="+34 600 000 000"
                   leftSection={<IconPhone size={16} />}
                   {...profileForm.getInputProps("phone")}
+                />
+                <Select
+                  label={t("myProfile.idioma")}
+                  leftSection={<IconLanguage size={16} />}
+                  data={SUPPORTED_LANGUAGES.map(l => ({ value: l.value, label: l.label }))}
+                  value={selectedLanguage}
+                  onChange={(value) => {
+                    if (value) {
+                      setSelectedLanguage(value as SupportedLanguage);
+                      changeLanguage(value as SupportedLanguage);
+                    }
+                  }}
+                  allowDeselect={false}
                 />
                 <Button
                   color="yellow"

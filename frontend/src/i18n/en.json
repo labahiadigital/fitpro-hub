@@ -1805,7 +1805,8 @@
     "cuandoSeGeneraFactura": "When an invoice is generated",
     "cuandoEntrenadorEnviaMensaje": "When your trainer sends you a message",
     "ofertasYPromociones": "Offers and promotions from your center",
-    "encuestasDeSatisfaccion": "Pending satisfaction surveys"
+    "encuestasDeSatisfaccion": "Pending satisfaction surveys",
+    "idioma": "Language"
   },
   "myProgress": {
     "fecha": "Date",

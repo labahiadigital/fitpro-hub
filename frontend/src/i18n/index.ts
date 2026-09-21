@@ -29,7 +29,9 @@ i18n
       escapeValue: false,
     },
     detection: {
-      order: ["localStorage", "navigator"],
+      // Only use explicitly saved preference. Never auto-detect from browser/navigator
+      // to prevent users seeing the app in an unexpected language.
+      order: ["localStorage"],
       lookupLocalStorage: "trackfiz-language",
       caches: ["localStorage"],
     },
