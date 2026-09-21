@@ -14,7 +14,7 @@ export const SUPPORTED_LANGUAGES = [
 
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]["value"];
 
-i18n
+export const i18nReady = i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
@@ -34,6 +34,11 @@ i18n
       order: ["localStorage"],
       lookupLocalStorage: "trackfiz-language",
       caches: ["localStorage"],
+    },
+    // All resources are bundled inline so translations are available immediately.
+    // Disable Suspense to avoid the NO_I18NEXT_INSTANCE warning on first render.
+    react: {
+      useSuspense: false,
     },
   });
 
