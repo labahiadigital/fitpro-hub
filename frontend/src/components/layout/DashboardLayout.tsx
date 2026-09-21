@@ -428,7 +428,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
             </Avatar>
             <Box style={{ flex: 1, minWidth: 0 }}>
               <Text c="white" size="sm" fw={600} lh={1.2} lineClamp={1}>
-                {user?.full_name || "Usuario"}
+                {user?.full_name || t("common.user")}
               </Text>
               <Text c="dimmed" size="xs" lh={1.2} lineClamp={1}>
                 {user?.email}
@@ -469,7 +469,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
             </Avatar>
             <Box style={{ flex: 1, minWidth: 0 }}>
               <Text c="white" size="sm" fw={700} lineClamp={1}>
-                {user?.full_name || "Usuario"}
+                {user?.full_name || t("common.user")}
               </Text>
               <Text c="dimmed" size="xs" lineClamp={1}>
                 {user?.email}
@@ -488,7 +488,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
 
           <Stack gap={2}>
             {workspaces.map((ws) => {
-              const isActive = ws.id === currentWsId;
+              const isActive = ws.id === currentWsId || (workspaces.length === 1);
               return (
                 <UnstyledButton
                   key={ws.id}
@@ -574,8 +574,26 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
 
         <Divider color="rgba(255,255,255,0.06)" />
 
-        {/* Logout */}
+        {/* Settings + Logout */}
         <Box px="xs" py="xs">
+          <UnstyledButton
+            w="100%"
+            px="xs"
+            py={8}
+            onClick={() => { close(); onNavigate?.(); navigate(user?.role === "client" ? "/my-profile" : "/settings"); }}
+            style={{
+              borderRadius: "8px",
+              transition: "background 0.15s",
+            }}
+            className="profile-btn"
+          >
+            <Group gap="sm">
+              <IconSettings size={16} color="rgba(255,255,255,0.4)" />
+              <Text c="rgba(255,255,255,0.5)" size="sm" fw={500}>
+                {t("layout.configuracion")}
+              </Text>
+            </Group>
+          </UnstyledButton>
           <UnstyledButton
             w="100%"
             px="xs"
