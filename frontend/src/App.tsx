@@ -12,6 +12,7 @@ import { WorkspaceThemeProvider } from "./components/theme/WorkspaceThemeProvide
 import { useAuthStore, waitForHydration } from "./stores/auth";
 import { authApi, scheduleProactiveRefresh, trySilentRefresh } from "./services/api";
 import { getApiErrorMessage } from "./utils/getApiErrorMessage";
+import { changeLanguage, type SupportedLanguage } from "./i18n";
 
 import { useTranslation } from "react-i18next";
 
@@ -151,6 +152,7 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
               is_active: boolean;
               role?: "owner" | "collaborator" | "client";
               workspace_id?: string;
+              preferences?: Record<string, unknown>;
               permissions?: Record<string, string[]>;
               workspaces?: Array<{ id: string; name: string; slug: string; logo_url?: string; domain?: string; branding?: { primary_color: string; secondary_color: string; accent_color: string }; role: "owner" | "collaborator" | "client" }>;
             };
@@ -162,9 +164,14 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
               is_active: data.is_active,
               role: data.role,
               workspace_id: data.workspace_id,
+              preferences: data.preferences,
               permissions: data.permissions,
               workspaces: data.workspaces,
             });
+            const userLang = (data.preferences?.language as string) || undefined;
+            if (userLang && ["es", "en", "it"].includes(userLang)) {
+              changeLanguage(userLang as SupportedLanguage);
+            }
             if (data.workspace_id && data.workspaces?.length) {
               const ws = data.workspaces.find((w: Record<string, unknown>) => w.id === data.workspace_id) || data.workspaces[0];
               if (ws) {
@@ -190,6 +197,11 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
         }
       } else {
         scheduleProactiveRefresh();
+        const existingUser = useAuthStore.getState().user;
+        const existingLang = (existingUser?.preferences?.language as string) || undefined;
+        if (existingLang && ["es", "en", "it"].includes(existingLang)) {
+          changeLanguage(existingLang as SupportedLanguage);
+        }
       }
 
       if (!cancelled) {

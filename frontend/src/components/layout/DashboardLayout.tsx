@@ -112,76 +112,76 @@ const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number, t: (key: string) => string
   { icon: <IconLayoutDashboard size={20} />, label: t("nav.dashboard"), to: "/dashboard" },
   {
     icon: <IconCalendarEvent size={20} />,
-    label: "Calendario y Tareas",
+    label: t("nav.calendarAndTasks"),
     children: [
-      { icon: <IconCalendarEvent size={18} />, label: "Calendario", to: "/calendar", requiredResource: "calendar" },
-      { icon: <IconChecklist size={18} />, label: "Tareas", to: "/tasks", requiredResource: "tasks" },
+      { icon: <IconCalendarEvent size={18} />, label: t("nav.calendar"), to: "/calendar", requiredResource: "calendar" },
+      { icon: <IconChecklist size={18} />, label: t("nav.tasks"), to: "/tasks", requiredResource: "tasks" },
     ],
   },
-  { icon: <IconUsers size={20} />, label: "Clientes", to: "/clients", requiredResource: "clients" },
+  { icon: <IconUsers size={20} />, label: t("nav.clients"), to: "/clients", requiredResource: "clients" },
   {
     icon: <IconReceipt size={20} />,
-    label: "Facturación y Reportes",
+    label: t("nav.billingAndReports"),
     children: [
-      { icon: <IconReceipt size={18} />, label: "Facturación", to: "/billing", requiredResource: "billing" },
-      { icon: <IconChartBar size={18} />, label: "Reportes", to: "/reports", requiredResource: "reports" },
-      { icon: <IconBuildingStore size={18} />, label: "Proveedores", to: "/suppliers", requiredResource: "billing" },
+      { icon: <IconReceipt size={18} />, label: t("nav.billing"), to: "/billing", requiredResource: "billing" },
+      { icon: <IconChartBar size={18} />, label: t("nav.reports"), to: "/reports", requiredResource: "reports" },
+      { icon: <IconBuildingStore size={18} />, label: t("nav.suppliers"), to: "/suppliers", requiredResource: "billing" },
     ],
   },
   {
     icon: <IconMessages size={20} />,
-    label: "Comunicación",
+    label: t("nav.communication"),
     children: [
-      { icon: <IconMessage size={18} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
-      { icon: <IconMail size={18} />, label: "Email", to: "/email-templates", requiredResource: "chat" },
+      { icon: <IconMessage size={18} />, label: t("nav.chat"), to: "/chat", badge: unreadCount, requiredResource: "chat" },
+      { icon: <IconMail size={18} />, label: t("nav.emailTemplates"), to: "/email-templates", requiredResource: "chat" },
     ],
   },
-  { icon: <IconBarbell size={20} />, label: "Entrenamientos", to: "/workouts", requiredResource: "workouts" },
-  { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition", requiredResource: "nutrition" },
+  { icon: <IconBarbell size={20} />, label: t("nav.workouts"), to: "/workouts", requiredResource: "workouts" },
+  { icon: <IconSalad size={20} />, label: t("nav.nutrition"), to: "/nutrition", requiredResource: "nutrition" },
   {
     icon: <IconPackage size={20} />,
-    label: "Catálogo y Stock",
+    label: t("nav.catalogAndStock"),
     children: [
-      { icon: <IconPackage size={18} />, label: "Catálogo", to: "/catalog", requiredResource: "catalog" },
-      { icon: <IconBox size={18} />, label: "Stock", to: "/stock", requiredResource: "catalog" },
+      { icon: <IconPackage size={18} />, label: t("nav.catalog"), to: "/catalog", requiredResource: "catalog" },
+      { icon: <IconBox size={18} />, label: t("nav.stock"), to: "/stock", requiredResource: "catalog" },
     ],
   },
   {
     icon: <IconBuilding size={20} />,
-    label: "Boxes y Maquinaria",
+    label: t("nav.boxesAndMachinery"),
     children: [
-      { icon: <IconBuilding size={18} />, label: "Boxes", to: "/boxes", requiredResource: "catalog" },
-      { icon: <IconTool size={18} />, label: "Maquinaria", to: "/machines", requiredResource: "catalog" },
+      { icon: <IconBuilding size={18} />, label: t("nav.boxes"), to: "/boxes", requiredResource: "catalog" },
+      { icon: <IconTool size={18} />, label: t("nav.machinery"), to: "/machines", requiredResource: "catalog" },
     ],
   },
   {
     icon: <IconForms size={20} />,
-    label: "Formularios y Docs",
+    label: t("nav.formsAndDocs"),
     children: [
-      { icon: <IconForms size={18} />, label: "Formularios", to: "/forms", requiredResource: "forms" },
-      { icon: <IconFileText size={18} />, label: "Documentos", to: "/documents", requiredResource: "documents" },
+      { icon: <IconForms size={18} />, label: t("nav.forms"), to: "/forms", requiredResource: "forms" },
+      { icon: <IconFileText size={18} />, label: t("nav.documents"), to: "/documents", requiredResource: "documents" },
     ],
   },
   {
     icon: <IconUsersGroup size={20} />,
-    label: t("nav.miembrosYEquipo"),
+    label: t("nav.membersAndTeam"),
     children: [
-      { icon: <IconUsers size={18} />, label: "Miembros", to: "/team/members", requiredResource: "team" },
-      { icon: <IconUsersGroup size={18} />, label: "Grupos", to: "/team/groups", requiredResource: "team" },
-      { icon: <IconShield size={18} />, label: "Roles", to: "/team/roles", requiredResource: "team" },
-      { icon: <IconClock size={18} />, label: "Control Horario", to: "/time-clock", requiredResource: "team" },
+      { icon: <IconUsers size={18} />, label: t("nav.members"), to: "/team/members", requiredResource: "team" },
+      { icon: <IconUsersGroup size={18} />, label: t("nav.groups"), to: "/team/groups", requiredResource: "team" },
+      { icon: <IconShield size={18} />, label: t("nav.roles"), to: "/team/roles", requiredResource: "team" },
+      { icon: <IconClock size={18} />, label: t("nav.timeClock"), to: "/time-clock", requiredResource: "team" },
     ],
   },
   {
     icon: <IconTrophy size={20} />,
-    label: "Comunidad",
+    label: t("nav.community"),
     children: [
-      { icon: <IconGift size={18} />, label: "Beneficios", to: "/community/benefits", requiredResource: "community" },
-      { icon: <IconTrophy size={18} />, label: "Gamificación", to: "/community", requiredResource: "community" },
+      { icon: <IconGift size={18} />, label: t("nav.benefits"), to: "/community/benefits", requiredResource: "community" },
+      { icon: <IconTrophy size={18} />, label: t("nav.gamification"), to: "/community", requiredResource: "community" },
     ],
   },
-  { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms", requiredResource: "lms" },
-  { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes", requiredResource: "live_classes" },
+  { icon: <IconBook size={20} />, label: t("nav.academy"), to: "/lms", requiredResource: "lms" },
+  { icon: <IconVideo size={20} />, label: t("nav.liveClasses"), to: "/live-classes", requiredResource: "live_classes" },
 ];
 
 function hasPermission(requiredResource: string | undefined, permissions?: Record<string, string[]>): boolean {
@@ -639,7 +639,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   const navEntries = isClient
     ? getClientNavItems(unreadCount, pendingTotal, t)
     : filterNavEntries(ALL_TRAINER_NAV_ENTRIES(unreadCount, t), user?.permissions);
-  const menuTitle = isClient ? "Mi Espacio" : t("nav.mainMenu");
+  const menuTitle = isClient ? t("nav.mySpace") : t("nav.mainMenu");
 
   return (
     <Box

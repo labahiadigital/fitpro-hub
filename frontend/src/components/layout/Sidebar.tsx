@@ -230,7 +230,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
                 fontSize: "10px",
               }}
             >
-              {"Menu Principal"}
+              {t("nav.mainMenu")}
             </Text>
           )}
           {navItems.map((item) => (
@@ -277,7 +277,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
                 {!collapsed && (
                   <Box style={{ flex: 1, overflow: "hidden" }}>
                     <Text c="white" fw={600} size="sm" lineClamp={1}>
-                      {user?.full_name || "Usuario"}
+                      {user?.full_name || t("common.user")}
                     </Text>
                     <Text c="dimmed" size="xs" lineClamp={1}>
                       {user?.email}

@@ -5998,6 +5998,24 @@
     "programDeleted": "Programma eliminato",
     "programDeletedMsg": "Il programma è stato eliminato correttamente",
     "workoutLoggedMsg": "L'allenamento è stato registrato correttamente",
-    "linkCopied": "Link copiato negli appunti"
+    "linkCopied": "Link copiato negli appunti",
+    "welcome": "Benvenuto!",
+    "loginError": "Errore di accesso",
+    "emailNotVerifiedMsg": "Devi verificare la tua email prima di accedere. Controlla la tua casella di posta.",
+    "accountCreatedTitle": "Account creato!",
+    "confirmEmailMsg": "Per favore, controlla la tua email per confermare l'account prima di accedere.",
+    "registerError": "Errore nella registrazione",
+    "switchWorkspaceError": "Impossibile cambiare workspace",
+    "logoutError": "Errore nella disconnessione",
+    "forgotPasswordMsg": "Se l'email è registrata, riceverai le istruzioni per reimpostare la password.",
+    "forgotPasswordError": "Impossibile elaborare la richiesta",
+    "passwordUpdatedTitle": "Password aggiornata!",
+    "passwordResetSuccess": "Ora puoi accedere con la tua nuova password.",
+    "resetPasswordError": "Impossibile reimpostare la password",
+    "passwordChangedMsg": "La tua password è stata aggiornata correttamente.",
+    "changePasswordError": "Impossibile cambiare la password",
+    "resendVerificationMsg": "Se l'email è registrata, riceverai un link di verifica.",
+    "resendVerificationError": "Impossibile inviare l'email",
+    "nowInWorkspace": "Ora sei in {{name}}"
   }
 }

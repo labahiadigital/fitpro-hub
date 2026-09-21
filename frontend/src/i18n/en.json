@@ -5998,6 +5998,24 @@
     "programDeleted": "Program deleted",
     "programDeletedMsg": "The program has been deleted successfully",
     "workoutLoggedMsg": "The workout has been logged successfully",
-    "linkCopied": "Link copied to clipboard"
+    "linkCopied": "Link copied to clipboard",
+    "welcome": "Welcome!",
+    "loginError": "Login failed",
+    "emailNotVerifiedMsg": "You must verify your email before logging in. Check your inbox.",
+    "accountCreatedTitle": "Account created!",
+    "confirmEmailMsg": "Please check your email to confirm your account before logging in.",
+    "registerError": "Registration failed",
+    "switchWorkspaceError": "Could not switch workspace",
+    "logoutError": "Logout failed",
+    "forgotPasswordMsg": "If the email is registered, you will receive password reset instructions.",
+    "forgotPasswordError": "Could not process the request",
+    "passwordUpdatedTitle": "Password updated!",
+    "passwordResetSuccess": "You can now log in with your new password.",
+    "resetPasswordError": "Could not reset the password",
+    "passwordChangedMsg": "Your password has been updated successfully.",
+    "changePasswordError": "Could not change the password",
+    "resendVerificationMsg": "If the email is registered, you will receive a verification link.",
+    "resendVerificationError": "Could not send the email",
+    "nowInWorkspace": "You are now in {{name}}"
   }
 }

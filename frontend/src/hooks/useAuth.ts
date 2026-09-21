@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi, workspacesApi } from "../services/api";
 import { useAuthStore } from "../stores/auth";
+import { changeLanguage, type SupportedLanguage } from "../i18n";
 
 export function useAuth() {
   const navigate = useNavigate();
@@ -29,6 +30,11 @@ export function useAuth() {
       const userData = userResponse.data;
       setUser(userData);
 
+      const userLang = (userData.preferences?.language as string) || undefined;
+      if (userLang && ["es", "en", "it"].includes(userLang)) {
+        changeLanguage(userLang as SupportedLanguage);
+      }
+
       const activeWorkspaceId = userData.workspace_id;
       if (activeWorkspaceId) {
         try {
@@ -47,7 +53,7 @@ export function useAuth() {
       }
 
       notifications.show({
-        title: "¡Bienvenido!",
+        title: i18next.t("hooks.welcome"),
         message: i18next.t("hooks.loginSuccess"),
         color: "green",
       });
@@ -65,18 +71,18 @@ export function useAuth() {
         message?: string;
       };
       const message =
-        err.response?.data?.detail || err.message || "Error al iniciar sesión";
+        err.response?.data?.detail || err.message || i18next.t("hooks.loginError");
       
       if (err.response?.status === 403 && message.includes("verificar")) {
         notifications.show({
           title: i18next.t("hooks.emailNotVerified"),
-          message: "Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.",
+          message: i18next.t("hooks.emailNotVerifiedMsg"),
           color: "orange",
           autoClose: 10000,
         });
       } else {
         notifications.show({
-          title: "Error",
+          title: i18next.t("common.error"),
           message,
           color: "red",
         });
@@ -106,8 +112,8 @@ export function useAuth() {
 
       if (access_token === "pending_email_confirmation" || requires_email_verification) {
         notifications.show({
-          title: "¡Cuenta creada!",
-          message: "Por favor, revisa tu email para confirmar tu cuenta antes de iniciar sesión.",
+          title: i18next.t("hooks.accountCreatedTitle"),
+          message: i18next.t("hooks.confirmEmailMsg"),
           color: "blue",
           autoClose: 10000,
         });
@@ -130,7 +136,7 @@ export function useAuth() {
       }
 
       notifications.show({
-        title: "¡Cuenta creada!",
+        title: i18next.t("hooks.accountCreatedTitle"),
         message: i18next.t("hooks.accountCreated"),
         color: "green",
       });
@@ -142,9 +148,9 @@ export function useAuth() {
         message?: string;
       };
       const message =
-        err.response?.data?.detail || err.message || "Error al registrar usuario";
+        err.response?.data?.detail || err.message || i18next.t("hooks.registerError");
       notifications.show({
-        title: "Error",
+        title: i18next.t("common.error"),
         message,
         color: "red",
       });
@@ -183,7 +189,7 @@ export function useAuth() {
 
       notifications.show({
         title: i18next.t("hooks.workspaceChanged"),
-        message: `Ahora estás en ${userData.workspaces?.find((w: { id: string }) => w.id === workspaceId)?.name || "otro workspace"}`,
+        message: i18next.t("hooks.nowInWorkspace", { name: userData.workspaces?.find((w: { id: string }) => w.id === workspaceId)?.name || "workspace" }),
         color: "teal",
       });
     } catch (error: unknown) {
@@ -192,8 +198,8 @@ export function useAuth() {
         message?: string;
       };
       notifications.show({
-        title: "Error",
-        message: err.response?.data?.detail || "No se pudo cambiar de workspace",
+        title: i18next.t("common.error"),
+        message: err.response?.data?.detail || i18next.t("hooks.switchWorkspaceError"),
         color: "red",
       });
     } finally {
@@ -222,8 +228,8 @@ export function useAuth() {
     } catch (error: unknown) {
       const err = error as { message?: string };
       notifications.show({
-        title: "Error",
-        message: err.message || "Error al cerrar sesión",
+        title: i18next.t("common.error"),
+        message: err.message || i18next.t("hooks.logoutError"),
         color: "red",
       });
     } finally {
@@ -237,7 +243,7 @@ export function useAuth() {
       await authApi.forgotPassword(email);
       notifications.show({
         title: i18next.t("hooks.emailSent"),
-        message: "Si el email está registrado, recibirás instrucciones para restablecer tu contraseña.",
+        message: i18next.t("hooks.forgotPasswordMsg"),
         color: "green",
       });
     } catch (error: unknown) {
@@ -246,8 +252,8 @@ export function useAuth() {
         message?: string;
       };
       notifications.show({
-        title: "Error",
-        message: err.response?.data?.detail || "Error al procesar la solicitud",
+        title: i18next.t("common.error"),
+        message: err.response?.data?.detail || i18next.t("hooks.forgotPasswordError"),
         color: "red",
       });
       throw error;
@@ -261,8 +267,8 @@ export function useAuth() {
     try {
       await authApi.resetPassword(token, newPassword);
       notifications.show({
-        title: "¡Contraseña actualizada!",
-        message: "Ya puedes iniciar sesión con tu nueva contraseña.",
+        title: i18next.t("hooks.passwordUpdatedTitle"),
+        message: i18next.t("hooks.passwordResetSuccess"),
         color: "green",
       });
       navigate("/login");
@@ -272,8 +278,8 @@ export function useAuth() {
         message?: string;
       };
       notifications.show({
-        title: "Error",
-        message: err.response?.data?.detail || "Error al restablecer la contraseña",
+        title: i18next.t("common.error"),
+        message: err.response?.data?.detail || i18next.t("hooks.resetPasswordError"),
         color: "red",
       });
       throw error;
@@ -287,8 +293,8 @@ export function useAuth() {
     try {
       await authApi.changePassword(currentPassword, newPassword);
       notifications.show({
-        title: "¡Contraseña actualizada!",
-        message: "Tu contraseña ha sido actualizada correctamente.",
+        title: i18next.t("hooks.passwordUpdatedTitle"),
+        message: i18next.t("hooks.passwordChangedMsg"),
         color: "green",
       });
     } catch (error: unknown) {
@@ -297,8 +303,8 @@ export function useAuth() {
         message?: string;
       };
       notifications.show({
-        title: "Error",
-        message: err.response?.data?.detail || "Error al cambiar la contraseña",
+        title: i18next.t("common.error"),
+        message: err.response?.data?.detail || i18next.t("hooks.changePasswordError"),
         color: "red",
       });
       throw error;
@@ -313,7 +319,7 @@ export function useAuth() {
       await authApi.resendVerification(email);
       notifications.show({
         title: i18next.t("hooks.emailSent"),
-        message: "Si el email está registrado, recibirás un enlace de verificación.",
+        message: i18next.t("hooks.resendVerificationMsg"),
         color: "green",
       });
     } catch (error: unknown) {
@@ -322,8 +328,8 @@ export function useAuth() {
         message?: string;
       };
       notifications.show({
-        title: "Error",
-        message: err.response?.data?.detail || "Error al enviar el email",
+        title: i18next.t("common.error"),
+        message: err.response?.data?.detail || i18next.t("hooks.resendVerificationError"),
         color: "red",
       });
       throw error;
