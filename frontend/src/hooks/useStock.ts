@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import api from "../services/api";
@@ -96,7 +97,7 @@ export function useCreateStockItem() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock-items"] });
       qc.invalidateQueries({ queryKey: ["stock-summary"] });
-      notifications.show({ title: "Elemento creado", message: "Se ha añadido al inventario", color: "green" });
+      notifications.show({ title: i18next.t("hooks.itemCreated"), message: i18next.t("hooks.addedToInventory"), color: "green" });
     },
   });
 }
@@ -108,7 +109,7 @@ export function useUpdateStockItem() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock-items"] });
       qc.invalidateQueries({ queryKey: ["stock-summary"] });
-      notifications.show({ title: "Elemento actualizado", message: "Los cambios se han guardado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.itemUpdated"), message: i18next.t("hooks.itemChangesSaved"), color: "green" });
     },
   });
 }
@@ -120,7 +121,7 @@ export function useDeleteStockItem() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock-items"] });
       qc.invalidateQueries({ queryKey: ["stock-summary"] });
-      notifications.show({ title: "Elemento eliminado", message: "Se ha eliminado del inventario", color: "red" });
+      notifications.show({ title: i18next.t("hooks.itemDeleted"), message: i18next.t("hooks.removedFromInventory"), color: "red" });
     },
   });
 }
@@ -134,7 +135,7 @@ export function useRegisterMovement() {
       qc.invalidateQueries({ queryKey: ["stock-items"] });
       qc.invalidateQueries({ queryKey: ["stock-summary"] });
       qc.invalidateQueries({ queryKey: ["stock-movements"] });
-      notifications.show({ title: "Movimiento registrado", message: "El stock se ha actualizado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.movementLogged"), message: i18next.t("hooks.stockUpdated"), color: "green" });
     },
   });
 }
@@ -166,7 +167,7 @@ export function useCreateStockCategory() {
     mutationFn: async (data: { name: string; icon?: string }) => (await api.post("/stock/categories", data)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock-categories"] });
-      notifications.show({ title: "Categoría creada", message: "Se ha creado la categoría", color: "green" });
+      notifications.show({ title: i18next.t("hooks.categoryCreated"), message: i18next.t("hooks.categoryCreatedMsg"), color: "green" });
     },
   });
 }

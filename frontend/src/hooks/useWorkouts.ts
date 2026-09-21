@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { workoutsApi } from "../services/api";
@@ -110,8 +111,8 @@ export function useCreateExercise() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exercises"] });
       notifications.show({
-        title: "Ejercicio creado",
-        message: "El ejercicio ha sido creado correctamente",
+        title: i18next.t("hooks.exerciseCreated"),
+        message: i18next.t("hooks.exerciseCreatedMsg"),
         color: "green",
       });
     },
@@ -160,8 +161,8 @@ export function useCreateWorkoutProgram() {
       queryClient.invalidateQueries({ queryKey: ["workout-program-templates"] });
       queryClient.invalidateQueries({ queryKey: ["client-workout-assignments"] });
       notifications.show({
-        title: "Programa creado",
-        message: "El programa de entrenamiento ha sido creado correctamente",
+        title: i18next.t("hooks.programCreated"),
+        message: i18next.t("hooks.programCreatedMsg"),
         color: "green",
       });
     },
@@ -189,8 +190,8 @@ export function useUpdateWorkoutProgram() {
         queryKey: ["workout-program", variables.id],
       });
       notifications.show({
-        title: "Programa actualizado",
-        message: "El programa ha sido actualizado correctamente",
+        title: i18next.t("hooks.programUpdated"),
+        message: i18next.t("hooks.programUpdatedMsg"),
         color: "green",
       });
     },
@@ -213,8 +214,8 @@ export function useDeleteWorkoutProgram() {
       queryClient.invalidateQueries({ queryKey: ["workout-programs"] });
       queryClient.invalidateQueries({ queryKey: ["client-workout-assignments"] });
       notifications.show({
-        title: "Programa eliminado",
-        message: "El programa ha sido eliminado correctamente",
+        title: i18next.t("hooks.programDeleted"),
+        message: i18next.t("hooks.programDeletedMsg"),
         color: "green",
       });
     },
@@ -251,8 +252,8 @@ export function useCreateWorkoutLog() {
         queryKey: ["workout-logs", variables.client_id],
       });
       notifications.show({
-        title: "Entrenamiento registrado",
-        message: "El entrenamiento ha sido registrado correctamente",
+        title: i18next.t("hooks.workoutLogged"),
+        message: i18next.t("hooks.workoutLoggedMsg"),
         color: "green",
       });
     },

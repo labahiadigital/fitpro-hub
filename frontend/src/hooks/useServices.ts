@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { servicesApi } from "../services/api";
@@ -51,7 +52,7 @@ export function useCreateService() {
     mutationFn: (data: object) => servicesApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
-      notifications.show({ title: "Servicio creado", message: "El servicio ha sido creado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.serviceCreated"), message: i18next.t("hooks.serviceCreatedMsg"), color: "green" });
     },
     onError: (e: unknown) => notifications.show({ title: "Error", message: getApiErrorMessage(e), color: "red" }),
   });
@@ -63,7 +64,7 @@ export function useUpdateService() {
     mutationFn: ({ id, data }: { id: string; data: object }) => servicesApi.update(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
-      notifications.show({ title: "Servicio actualizado", message: "Cambios guardados", color: "green" });
+      notifications.show({ title: i18next.t("hooks.serviceUpdated"), message: i18next.t("hooks.changesSaved"), color: "green" });
     },
     onError: (e: unknown) => notifications.show({ title: "Error", message: getApiErrorMessage(e), color: "red" }),
   });
@@ -75,7 +76,7 @@ export function useDeleteService() {
     mutationFn: (id: string) => servicesApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
-      notifications.show({ title: "Servicio eliminado", message: "El servicio ha sido eliminado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.serviceDeleted"), message: i18next.t("hooks.serviceDeletedMsg"), color: "green" });
     },
   });
 }

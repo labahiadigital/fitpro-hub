@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
@@ -132,7 +133,7 @@ export function useDeleteAbandonedCart() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clients", "segment", "abandoned-cart"] });
       notifications.show({
-        title: "Carrito eliminado",
+        title: i18next.t("hooks.cartDeleted"),
         message: "Se ha quitado del listado de carritos abandonados.",
         color: "blue",
       });
@@ -167,7 +168,7 @@ export function useResendSystemForm() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clients", "segment", "pending-system-form"] });
       notifications.show({
-        title: "Email reenviado",
+        title: i18next.t("hooks.emailResent"),
         message: "Se ha reenviado el correo de bienvenida con el cuestionario inicial.",
         color: "green",
       });
@@ -194,7 +195,7 @@ export function useCancelPendingSystemForm() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["clients", "segment", "pending-system-form"] });
       notifications.show({
-        title: "Solicitud cancelada",
+        title: i18next.t("hooks.requestCanceled"),
         message:
           data.cancelled > 0
             ? "La solicitud del cuestionario inicial se ha cancelado correctamente."
@@ -286,7 +287,7 @@ export function useSendCampaign() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["clients", "segment"] });
       notifications.show({
-        title: "Campaña enviada",
+        title: i18next.t("hooks.campaignSent"),
         message: `${data.sent} de ${data.total} envíos correctos${data.failed > 0 ? ` (${data.failed} fallaron)` : ""}.`,
         color: data.failed === 0 ? "green" : "orange",
       });

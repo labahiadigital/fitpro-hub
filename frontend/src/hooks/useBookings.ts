@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { bookingsApi } from "../services/api";
@@ -58,8 +59,8 @@ export function useCreateBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       notifications.show({
-        title: "Sesión creada",
-        message: "La sesión ha sido creada correctamente",
+        title: i18next.t("hooks.sessionCreated"),
+        message: i18next.t("hooks.sessionCreatedMsg"),
         color: "green",
       });
     },
@@ -83,8 +84,8 @@ export function useUpdateBooking() {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       queryClient.invalidateQueries({ queryKey: ["booking", variables.id] });
       notifications.show({
-        title: "Sesión actualizada",
-        message: "La sesión ha sido actualizada correctamente",
+        title: i18next.t("hooks.sessionUpdated"),
+        message: i18next.t("hooks.sessionUpdatedMsg"),
         color: "green",
       });
     },
@@ -106,8 +107,8 @@ export function useCancelBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       notifications.show({
-        title: "Sesión cancelada",
-        message: "La sesión ha sido cancelada correctamente",
+        title: i18next.t("hooks.sessionCanceled"),
+        message: i18next.t("hooks.sessionCanceledMsg"),
         color: "orange",
       });
     },
@@ -129,8 +130,8 @@ export function useDeleteBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       notifications.show({
-        title: "Sesión eliminada",
-        message: "La sesión ha sido eliminada permanentemente",
+        title: i18next.t("hooks.sessionDeleted"),
+        message: i18next.t("hooks.sessionDeletedMsg"),
         color: "red",
       });
     },
@@ -152,8 +153,8 @@ export function useCompleteBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       notifications.show({
-        title: "Sesión completada",
-        message: "La sesión ha sido marcada como completada",
+        title: i18next.t("hooks.sessionCompleted"),
+        message: i18next.t("hooks.sessionCompletedMsg"),
         color: "green",
       });
     },

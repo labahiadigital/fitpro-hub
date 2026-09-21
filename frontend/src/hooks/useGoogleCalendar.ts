@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
@@ -142,7 +143,7 @@ export function useSyncGoogleCalendar() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["google-calendar", "status"] });
       notifications.show({
-        title: "Sincronización completada",
+        title: i18next.t("hooks.syncCompleted"),
         message: data.message || `Se sincronizaron ${data.events_synced} eventos`,
         color: "green",
       });

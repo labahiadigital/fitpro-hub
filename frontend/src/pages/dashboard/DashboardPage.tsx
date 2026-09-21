@@ -343,7 +343,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
         <Group gap="xs">
           <IconTarget size={18} color="var(--nv-accent)" />
           <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-            {"Progreso General"}
+            {t("dashboard.generalProgress")}
           </Text>
         </Group>
       </Group>
@@ -360,7 +360,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
                 {activePercentage}%
               </Text>
               <Text size="xs" c="dimmed">
-                {"Activos"}
+                {t("dashboard.activos")}
               </Text>
             </Box>
           }
@@ -371,7 +371,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
         <Group justify="space-between">
           <Group gap="xs">
             <Box w={10} h={10} bg="green" style={{ borderRadius: "50%" }} />
-            <Text size="xs">{"Clientes Activos"}</Text>
+            <Text size="xs">{t("dashboard.clientesActivos")}</Text>
           </Group>
           <Text size="xs" fw={600}>
             {activeClients}
@@ -611,7 +611,7 @@ function ClientMetricsWidget({
       label: t("dashboard.tasaAbandono"),
       value: `${formatDecimal(kpis?.churn_rate || 0, 1)}%`,
       icon: IconHeartbeat,
-      trend: `${(kpis?.churn_rate || 0) <= 5 ? "Excelente" : "Revisar"}`,
+      trend: `${(kpis?.churn_rate || 0) <= 5 ? t("dashboard.excellent") : t("dashboard.needsReview")}`,
     },
   ];
 
@@ -621,7 +621,7 @@ function ClientMetricsWidget({
         <Group gap="xs">
           <IconChartLine size={18} color="var(--nv-success)" />
           <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-            {"Métricas Financieras"}
+            {t("dashboard.financialMetrics")}
           </Text>
         </Group>
         <Text size="xs" c="dimmed">
@@ -658,7 +658,7 @@ function ClientMetricsWidget({
                 size="xs"
                 variant="light"
                 color={
-                  metric.trend.startsWith("+") || metric.trend === "Excelente"
+                  metric.trend.startsWith("+") || metric.trend === t("dashboard.excellent")
                     ? "green"
                     : "blue"
                 }
@@ -922,7 +922,7 @@ export function DashboardPage() {
         <ClientKPI
           title={t("dashboard.activeClients")}
           value={kpis?.active_clients || 0}
-          subtitle={`${kpis?.total_clients || 0} total`}
+          subtitle={t("dashboard.kpis.total", { count: kpis?.total_clients || 0 })}
           icon={IconUsers}
           color="blue"
           loading={kpisLoading}

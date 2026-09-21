@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import {
   ActionIcon,
   Avatar,
@@ -169,7 +170,7 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
                       navigator.clipboard.writeText(liveClass.meeting_url || "");
                       notifications.show({
                         title: "Copiado",
-                        message: "Enlace copiado al portapapeles",
+                        message: i18next.t("hooks.linkCopied"),
                         color: "green",
                       });
                     }}

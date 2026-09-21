@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { clientPortalApi } from "../services/api";
@@ -292,15 +293,15 @@ export function useUpdateClientProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-profile"] });
       notifications.show({
-        title: "Perfil actualizado",
-        message: "Tus datos se han guardado correctamente",
+        title: i18next.t("hooks.profileUpdated"),
+        message: i18next.t("hooks.dataSavedCorrectly"),
         color: "green",
       });
     },
     onError: () => {
       notifications.show({
         title: "Error",
-        message: "No se pudo actualizar el perfil",
+        message: i18next.t("hooks.profileUpdateFailed"),
         color: "red",
       });
     },
@@ -379,8 +380,8 @@ export function useUpdateProgramExercise() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
       notifications.show({
-        title: "Ejercicio cambiado",
-        message: "Se ha sustituido el ejercicio correctamente",
+        title: i18next.t("hooks.exerciseChanged"),
+        message: i18next.t("hooks.exerciseReplacedMsg"),
         color: "green",
       });
     },
@@ -408,8 +409,8 @@ export function useLogWorkout() {
       queryClient.invalidateQueries({ queryKey: ["today-workout-logs"] });
       queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
       notifications.show({
-        title: "Entrenamiento registrado",
-        message: "Tu progreso ha sido guardado",
+        title: i18next.t("hooks.workoutLogged"),
+        message: i18next.t("hooks.progressSaved"),
         color: "green",
       });
     },
@@ -417,14 +418,14 @@ export function useLogWorkout() {
       // Check if it's a 409 Conflict (duplicate)
       if (error.response?.status === 409) {
         notifications.show({
-          title: "Ya registrado",
+          title: i18next.t("hooks.alreadyLogged"),
           message: error.response?.data?.detail || "Ya has registrado este entrenamiento hoy",
           color: "yellow",
         });
       } else {
         notifications.show({
           title: "Error",
-          message: "No se pudo registrar el entrenamiento",
+          message: i18next.t("hooks.workoutLogFailed"),
           color: "red",
         });
       }
@@ -467,22 +468,22 @@ export function useLogWorkoutDetailed() {
       queryClient.invalidateQueries({ queryKey: ["today-workout-logs"] });
       queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
       notifications.show({
-        title: "Entrenamiento registrado",
-        message: "Tu progreso detallado ha sido guardado",
+        title: i18next.t("hooks.workoutLogged"),
+        message: i18next.t("hooks.detailedProgressSaved"),
         color: "green",
       });
     },
     onError: (error: Error & { response?: { status?: number; data?: { detail?: string } } }) => {
       if (error.response?.status === 409) {
         notifications.show({
-          title: "Ya registrado",
+          title: i18next.t("hooks.alreadyLogged"),
           message: error.response?.data?.detail || "Ya has registrado este entrenamiento hoy",
           color: "yellow",
         });
       } else {
         notifications.show({
           title: "Error",
-          message: "No se pudo registrar el entrenamiento",
+          message: i18next.t("hooks.workoutLogFailed"),
           color: "red",
         });
       }
@@ -498,7 +499,7 @@ export function useSwapWorkoutDays() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
-      notifications.show({ title: "Días intercambiados", message: "Los entrenamientos se han intercambiado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.daysSwapped"), message: i18next.t("hooks.workoutsSwapped"), color: "green" });
     },
   });
 }
@@ -511,7 +512,7 @@ export function useSwapWorkouts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
-      notifications.show({ title: "Entrenamientos intercambiados", message: "Los bloques se han intercambiado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.workoutsSwappedTitle"), message: i18next.t("hooks.blocksSwapped"), color: "green" });
     },
   });
 }
@@ -524,7 +525,7 @@ export function useMoveExercise() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
-      notifications.show({ title: "Ejercicio movido", message: "El ejercicio se ha movido correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.exerciseMoved"), message: i18next.t("hooks.exerciseMovedMsg"), color: "green" });
     },
   });
 }
@@ -537,7 +538,7 @@ export function useSwapExercises() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
-      notifications.show({ title: "Ejercicios intercambiados", message: "Los ejercicios se han intercambiado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.exercisesSwapped"), message: i18next.t("hooks.exercisesSwappedMsg"), color: "green" });
     },
   });
 }
@@ -655,8 +656,8 @@ export function useLogNutrition() {
       queryClient.invalidateQueries({ queryKey: ["nutrition-history"] });
       queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
       notifications.show({
-        title: "Comida registrada",
-        message: "Tu registro nutricional ha sido guardado",
+        title: i18next.t("hooks.mealLogged"),
+        message: i18next.t("hooks.nutritionLogSaved"),
         color: "green",
       });
     },
@@ -664,14 +665,14 @@ export function useLogNutrition() {
       // Check if it's a 409 Conflict (duplicate)
       if (error.response?.status === 409) {
         notifications.show({
-          title: "Ya registrado",
+          title: i18next.t("hooks.alreadyLogged"),
           message: error.response?.data?.detail || "Ya has registrado esta comida para hoy",
           color: "yellow",
         });
       } else {
         notifications.show({
           title: "Error",
-          message: "No se pudo registrar la comida",
+          message: i18next.t("hooks.mealLogFailed"),
           color: "red",
         });
       }
@@ -703,15 +704,15 @@ export function useDeleteNutritionLog() {
       queryClient.invalidateQueries({ queryKey: ["nutrition-history"] });
       queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
       notifications.show({
-        title: "Registro eliminado",
-        message: "El registro nutricional ha sido eliminado",
+        title: i18next.t("hooks.recordDeleted"),
+        message: i18next.t("hooks.nutritionLogDeleted"),
         color: "blue",
       });
     },
     onError: () => {
       notifications.show({
         title: "Error",
-        message: "No se pudo eliminar el registro",
+        message: i18next.t("hooks.logDeleteFailed"),
         color: "red",
       });
     },
@@ -727,7 +728,7 @@ export function useMoveMeal() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
       queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
-      notifications.show({ title: "Comida movida", message: "La comida se ha movido al nuevo día", color: "green" });
+      notifications.show({ title: i18next.t("hooks.mealMoved"), message: i18next.t("hooks.mealMovedMsg"), color: "green" });
     },
   });
 }
@@ -741,7 +742,7 @@ export function useSwapDays() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
       queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
-      notifications.show({ title: "Días intercambiados", message: "Las comidas de los días se han intercambiado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.daysSwapped"), message: i18next.t("hooks.mealDaysSwapped"), color: "green" });
     },
   });
 }
@@ -755,7 +756,7 @@ export function useSwapMeals() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
       queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
-      notifications.show({ title: "Comidas intercambiadas", message: "Las comidas se han intercambiado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.mealsSwapped"), message: i18next.t("hooks.mealsSwappedMsg"), color: "green" });
     },
   });
 }
@@ -769,7 +770,7 @@ export function useUpdateMealTime() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
       queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
-      notifications.show({ title: "Hora actualizada", message: "La hora de la comida se ha actualizado y reordenado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.timeUpdated"), message: i18next.t("hooks.mealTimeUpdated"), color: "green" });
     },
   });
 }
@@ -783,7 +784,7 @@ export function useUpdateMealName() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
       queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
-      notifications.show({ title: "Nombre actualizado", message: "El nombre de la comida se ha actualizado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.nameUpdated"), message: i18next.t("hooks.mealNameUpdated"), color: "green" });
     },
   });
 }
@@ -878,15 +879,15 @@ export function useCreateMeasurement() {
       // al recibir nuevas medidas. Refrescamos la cola de avisos.
       queryClient.invalidateQueries({ queryKey: ["my-pending-reviews"] });
       notifications.show({
-        title: "Medidas registradas",
-        message: "Tu progreso ha sido guardado",
+        title: i18next.t("hooks.measurementsLogged"),
+        message: i18next.t("hooks.progressSaved"),
         color: "green",
       });
     },
     onError: () => {
       notifications.show({
         title: "Error",
-        message: "No se pudieron registrar las medidas",
+        message: i18next.t("hooks.measurementsLogFailed"),
         color: "red",
       });
     },
@@ -971,8 +972,8 @@ export function useUploadProgressPhoto() {
       queryClient.invalidateQueries({ queryKey: ["progress-summary"] });
       queryClient.invalidateQueries({ queryKey: ["my-pending-reviews"] });
       notifications.show({
-        title: "Foto subida",
-        message: "Tu foto de progreso ha sido guardada",
+        title: i18next.t("hooks.photoUploaded"),
+        message: i18next.t("hooks.progressPhotoSaved"),
         color: "green",
       });
     },
@@ -999,8 +1000,8 @@ export function useDeleteProgressPhoto() {
       queryClient.invalidateQueries({ queryKey: ["my-measurements"] });
       queryClient.invalidateQueries({ queryKey: ["progress-summary"] });
       notifications.show({
-        title: "Foto eliminada",
-        message: "La foto de progreso ha sido eliminada",
+        title: i18next.t("hooks.photoDeleted"),
+        message: i18next.t("hooks.progressPhotoDeleted"),
         color: "green",
       });
     },
@@ -1087,15 +1088,15 @@ export function useCreateFeedback() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-feedback"] });
       notifications.show({
-        title: "Feedback enviado",
-        message: "Gracias por tu valoración",
+        title: i18next.t("hooks.feedbackSent"),
+        message: i18next.t("hooks.thanksFeedback"),
         color: "green",
       });
     },
     onError: () => {
       notifications.show({
         title: "Error",
-        message: "No se pudo enviar el feedback",
+        message: i18next.t("hooks.feedbackFailed"),
         color: "red",
       });
     },
@@ -1122,15 +1123,15 @@ export function useCreateWorkoutFeedback() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-feedback"] });
       notifications.show({
-        title: "Valoración enviada",
-        message: "Gracias por valorar tu programa de entrenamiento",
+        title: i18next.t("hooks.ratingSent"),
+        message: i18next.t("hooks.thanksWorkoutRating"),
         color: "green",
       });
     },
     onError: () => {
       notifications.show({
         title: "Error",
-        message: "No se pudo enviar la valoración",
+        message: i18next.t("hooks.ratingFailed"),
         color: "red",
       });
     },
@@ -1159,15 +1160,15 @@ export function useCreateDietFeedback() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-feedback"] });
       notifications.show({
-        title: "Valoración enviada",
-        message: "Gracias por valorar tu plan nutricional",
+        title: i18next.t("hooks.ratingSent"),
+        message: i18next.t("hooks.thanksNutritionRating"),
         color: "green",
       });
     },
     onError: () => {
       notifications.show({
         title: "Error",
-        message: "No se pudo enviar la valoración",
+        message: i18next.t("hooks.ratingFailed"),
         color: "red",
       });
     },
@@ -1224,8 +1225,8 @@ export function useCreateClientBooking() {
       queryClient.invalidateQueries({ queryKey: ["available-slots"] });
       queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
       notifications.show({
-        title: "Cita solicitada",
-        message: "Tu solicitud de cita ha sido enviada al entrenador",
+        title: i18next.t("hooks.appointmentRequested"),
+        message: i18next.t("hooks.appointmentRequestSent"),
         color: "green",
       });
     },
@@ -1249,7 +1250,7 @@ export function useCancelClientBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
       queryClient.invalidateQueries({ queryKey: ["available-slots"] });
-      notifications.show({ title: "Cita cancelada", message: "La cita ha sido cancelada correctamente", color: "orange" });
+      notifications.show({ title: "Cita cancelada", message: i18next.t("hooks.appointmentCanceledMsg"), color: "orange" });
     },
     onError: (error: Error & { response?: { data?: { detail?: string } } }) => {
       notifications.show({ title: "Error", message: error.response?.data?.detail || "No se pudo cancelar la cita", color: "red" });
@@ -1267,7 +1268,7 @@ export function useUpdateClientBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
       queryClient.invalidateQueries({ queryKey: ["available-slots"] });
-      notifications.show({ title: "Cita modificada", message: "La cita ha sido modificada y está pendiente de confirmación", color: "blue" });
+      notifications.show({ title: i18next.t("hooks.appointmentModified"), message: i18next.t("hooks.appointmentModifiedMsg"), color: "blue" });
     },
     onError: (error: Error & { response?: { data?: { detail?: string } } }) => {
       notifications.show({ title: "Error", message: error.response?.data?.detail || "No se pudo modificar la cita", color: "red" });
@@ -1306,15 +1307,15 @@ export function useCreateEmotion() {
       queryClient.invalidateQueries({ queryKey: ["client-emotions"] });
       queryClient.invalidateQueries({ queryKey: ["today-emotion"] });
       notifications.show({
-        title: "Estado de ánimo registrado",
-        message: "Tu registro del día ha sido guardado",
+        title: i18next.t("hooks.moodLogged"),
+        message: i18next.t("hooks.dayLogSaved"),
         color: "green",
       });
     },
     onError: () => {
       notifications.show({
         title: "Error",
-        message: "No se pudo registrar tu estado de ánimo",
+        message: i18next.t("hooks.moodLogFailed"),
         color: "red",
       });
     },

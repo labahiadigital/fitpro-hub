@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
@@ -104,7 +105,7 @@ export function useSyncWhatsApp() {
         error.message ||
         "No se pudo sincronizar con Kapso";
       notifications.show({
-        title: "Error al sincronizar",
+        title: i18next.t("hooks.syncError"),
         message,
         color: "red",
       });

@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { customRolesApi } from "../services/api";
@@ -31,10 +32,10 @@ export function useCreateCustomRole() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["custom-roles"] });
-      notifications.show({ title: "Rol creado", message: "El rol se ha creado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.roleCreated"), message: i18next.t("hooks.roleCreatedMsg"), color: "green" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo crear el rol", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.roleCreateFailed"), color: "red" });
     },
   });
 }
@@ -48,10 +49,10 @@ export function useUpdateCustomRole() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["custom-roles"] });
-      notifications.show({ title: "Rol actualizado", message: "Los cambios se han guardado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.roleUpdated"), message: i18next.t("hooks.itemChangesSaved"), color: "green" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo actualizar el rol", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.roleUpdateFailed"), color: "red" });
     },
   });
 }
@@ -65,10 +66,10 @@ export function useDeleteCustomRole() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["custom-roles"] });
-      notifications.show({ title: "Rol eliminado", message: "El rol se ha eliminado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.roleDeleted"), message: i18next.t("hooks.roleDeletedMsg"), color: "green" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo eliminar el rol", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.roleDeleteFailed"), color: "red" });
     },
   });
 }

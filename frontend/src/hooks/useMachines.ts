@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { machinesApi } from "../services/api";
@@ -51,7 +52,7 @@ export function useCreateMachine() {
     mutationFn: (data: Partial<MachineData>) => machinesApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["machines"] });
-      notifications.show({ title: "Máquina creada", message: "La máquina ha sido creada", color: "green" });
+      notifications.show({ title: i18next.t("hooks.machineCreated"), message: i18next.t("hooks.machineCreatedMsg"), color: "green" });
     },
     onError: (e: unknown) => notifications.show({ title: "Error", message: getApiErrorMessage(e), color: "red" }),
   });
@@ -63,7 +64,7 @@ export function useUpdateMachine() {
     mutationFn: ({ id, data }: { id: string; data: Partial<MachineData> }) => machinesApi.update(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["machines"] });
-      notifications.show({ title: "Máquina actualizada", message: "Cambios guardados", color: "green" });
+      notifications.show({ title: i18next.t("hooks.machineUpdated"), message: i18next.t("hooks.changesSaved"), color: "green" });
     },
     onError: (e: unknown) => notifications.show({ title: "Error", message: getApiErrorMessage(e), color: "red" }),
   });
@@ -75,7 +76,7 @@ export function useDeleteMachine() {
     mutationFn: (id: string) => machinesApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["machines"] });
-      notifications.show({ title: "Máquina eliminada", message: "La máquina ha sido eliminada", color: "green" });
+      notifications.show({ title: i18next.t("hooks.machineDeleted"), message: i18next.t("hooks.machineDeletedMsg"), color: "green" });
     },
   });
 }

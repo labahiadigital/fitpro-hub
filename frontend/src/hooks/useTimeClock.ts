@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
 import { notifications } from "@mantine/notifications";
@@ -92,7 +93,7 @@ export function useClockIn() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["time-clock-status"] });
       qc.invalidateQueries({ queryKey: ["time-clock-records"] });
-      notifications.show({ title: "Fichaje", message: "Entrada registrada", color: "green" });
+      notifications.show({ title: "Fichaje", message: i18next.t("hooks.clockedIn"), color: "green" });
     },
     onError: (e) => notifications.show({ title: "Error", message: extractError(e, "No se pudo fichar entrada"), color: "red" }),
   });
@@ -108,7 +109,7 @@ export function useClockOut() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["time-clock-status"] });
       qc.invalidateQueries({ queryKey: ["time-clock-records"] });
-      notifications.show({ title: "Fichaje", message: "Salida registrada", color: "green" });
+      notifications.show({ title: "Fichaje", message: i18next.t("hooks.clockedOut"), color: "green" });
     },
     onError: (e) => notifications.show({ title: "Error", message: extractError(e, "No se pudo fichar salida"), color: "red" }),
   });
@@ -153,7 +154,7 @@ export function useUpdateRecord() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["time-clock-records"] });
-      notifications.show({ title: "Actualizado", message: "Registro actualizado", color: "green" });
+      notifications.show({ title: "Actualizado", message: i18next.t("hooks.recordUpdated"), color: "green" });
     },
     onError: (e) => notifications.show({ title: "Error", message: extractError(e, "No se pudo actualizar"), color: "red" }),
   });
@@ -167,7 +168,7 @@ export function useDeleteRecord() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["time-clock-records"] });
-      notifications.show({ title: "Eliminado", message: "Registro eliminado", color: "green" });
+      notifications.show({ title: "Eliminado", message: i18next.t("hooks.recordDeleted"), color: "green" });
     },
     onError: (e) => notifications.show({ title: "Error", message: extractError(e, "No se pudo eliminar"), color: "red" }),
   });
@@ -198,7 +199,7 @@ export function useCreateLeave() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["time-clock-leaves"] });
-      notifications.show({ title: "Solicitud creada", message: "Solicitud de ausencia creada", color: "green" });
+      notifications.show({ title: i18next.t("hooks.leaveRequestCreated"), message: i18next.t("hooks.leaveRequestCreatedMsg"), color: "green" });
     },
     onError: (e) => notifications.show({ title: "Error", message: extractError(e, "No se pudo crear solicitud"), color: "red" }),
   });
@@ -213,7 +214,7 @@ export function useApproveLeave() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["time-clock-leaves"] });
-      notifications.show({ title: "Aprobada", message: "Solicitud aprobada", color: "green" });
+      notifications.show({ title: "Aprobada", message: i18next.t("hooks.requestApproved"), color: "green" });
     },
     onError: (e) => notifications.show({ title: "Error", message: extractError(e, "No se pudo aprobar"), color: "red" }),
   });
@@ -228,7 +229,7 @@ export function useRejectLeave() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["time-clock-leaves"] });
-      notifications.show({ title: "Rechazada", message: "Solicitud rechazada", color: "green" });
+      notifications.show({ title: "Rechazada", message: i18next.t("hooks.requestRejected"), color: "green" });
     },
     onError: (e) => notifications.show({ title: "Error", message: extractError(e, "No se pudo rechazar"), color: "red" }),
   });
@@ -255,7 +256,7 @@ export function useCreateHoliday() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["time-clock-holidays"] });
-      notifications.show({ title: "Festivo creado", message: "Festivo añadido al calendario", color: "green" });
+      notifications.show({ title: i18next.t("hooks.holidayCreated"), message: i18next.t("hooks.holidayCreatedMsg"), color: "green" });
     },
     onError: (e) => notifications.show({ title: "Error", message: extractError(e, "No se pudo crear festivo"), color: "red" }),
   });
@@ -269,7 +270,7 @@ export function useDeleteHoliday() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["time-clock-holidays"] });
-      notifications.show({ title: "Festivo eliminado", message: "Festivo eliminado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.holidayDeleted"), message: i18next.t("hooks.holidayDeleted"), color: "green" });
     },
     onError: (e) => notifications.show({ title: "Error", message: extractError(e, "No se pudo eliminar festivo"), color: "red" }),
   });

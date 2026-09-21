@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api, { paymentsApi, productsApi } from "../services/api";
 import { useAuthStore } from "../stores/auth";
@@ -200,7 +201,7 @@ export function useCreateProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      notifications.show({ title: "Producto creado", message: "El producto ha sido creado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.productCreated"), message: i18next.t("hooks.productCreatedMsg"), color: "green" });
     },
     onError: (error: any) => {
       notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al crear producto", color: "red" });
@@ -217,7 +218,7 @@ export function useUpdateProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      notifications.show({ title: "Producto actualizado", message: "El producto ha sido actualizado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.productUpdated"), message: i18next.t("hooks.productUpdatedMsg"), color: "green" });
     },
     onError: (error: any) => {
       notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al actualizar producto", color: "red" });
@@ -234,11 +235,11 @@ export function useDeleteProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      notifications.show({ title: "Producto eliminado", message: "El producto ha sido eliminado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.productDeleted"), message: i18next.t("hooks.productDeletedMsg"), color: "green" });
     },
     onError: (error: any) => {
       const detail = error?.response?.data?.detail || "Error al eliminar producto";
-      notifications.show({ title: "No se puede eliminar", message: detail, color: "red" });
+      notifications.show({ title: i18next.t("hooks.cannotDelete"), message: detail, color: "red" });
     },
   });
 }
@@ -266,7 +267,7 @@ export function useCreatePayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["payment-kpis"] });
-      notifications.show({ title: "Cobro creado", message: "El cobro ha sido registrado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.chargeCreated"), message: i18next.t("hooks.chargeCreatedMsg"), color: "green" });
     },
     onError: (error: any) => {
       notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al crear cobro", color: "red" });
@@ -284,7 +285,7 @@ export function useMarkPaymentPaid() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["payment-kpis"] });
-      notifications.show({ title: "Pago completado", message: "El pago ha sido marcado como completado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.paymentCompleted"), message: i18next.t("hooks.paymentCompletedMsg"), color: "green" });
     },
     onError: (error: any) => {
       notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al marcar pago", color: "red" });
@@ -302,7 +303,7 @@ export function useDeletePayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["payment-kpis"] });
-      notifications.show({ title: "Pago eliminado", message: "El pago ha sido eliminado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.paymentDeleted"), message: i18next.t("hooks.paymentDeletedMsg"), color: "green" });
     },
     onError: (error: any) => {
       notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al eliminar pago", color: "red" });
@@ -320,7 +321,7 @@ export function useCancelSubscription() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
       queryClient.invalidateQueries({ queryKey: ["payment-kpis"] });
-      notifications.show({ title: "Suscripción cancelada", message: "La suscripción ha sido cancelada", color: "green" });
+      notifications.show({ title: i18next.t("hooks.subscriptionCanceled"), message: i18next.t("hooks.subscriptionCanceledMsg"), color: "green" });
     },
     onError: (error: any) => {
       notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al cancelar suscripción", color: "red" });
@@ -351,7 +352,7 @@ export function useUpdateProductResources() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["product-resources", variables.productId] });
-      notifications.show({ title: "Recursos actualizados", message: "Los recursos del producto se han guardado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.resourcesUpdated"), message: i18next.t("hooks.resourcesSaved"), color: "green" });
     },
     onError: (error: any) => {
       notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al guardar recursos", color: "red" });

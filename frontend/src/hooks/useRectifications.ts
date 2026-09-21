@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { useMutation } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import api from "../services/api";
@@ -17,15 +18,15 @@ export function useCreateRectification() {
     },
     onSuccess: () => {
       notifications.show({
-        title: "Solicitud enviada",
-        message: "Tu solicitud de rectificación ha sido registrada",
+        title: i18next.t("hooks.requestSent"),
+        message: i18next.t("hooks.rectificationRequestSent"),
         color: "green",
       });
     },
     onError: () => {
       notifications.show({
         title: "Error",
-        message: "No se pudo enviar la solicitud",
+        message: i18next.t("hooks.requestSendFailed"),
         color: "red",
       });
     },

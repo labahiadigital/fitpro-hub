@@ -126,7 +126,7 @@ const mockRoles: CustomRole[] = [
   {
     id: "1",
     name: "Entrenador Senior",
-    description: "Entrenador con acceso completo a clientes y entrenamientos",
+    description: i18next.t("teamComp.roleTrainerSeniorDesc"),
     color: "#2D6A4F",
     baseRole: "trainer",
     permissions: {
@@ -143,7 +143,7 @@ const mockRoles: CustomRole[] = [
   {
     id: "2",
     name: "Nutricionista",
-    description: "Acceso a planes nutricionales y datos de clientes",
+    description: i18next.t("teamComp.roleNutritionistDesc"),
     color: "#40916C",
     baseRole: "nutritionist",
     permissions: {
@@ -158,7 +158,7 @@ const mockRoles: CustomRole[] = [
   {
     id: "3",
     name: "Asistente",
-    description: "Acceso limitado para tareas administrativas",
+    description: i18next.t("teamComp.roleAssistantDesc"),
     color: "#F08A5D",
     baseRole: "collaborator",
     permissions: {

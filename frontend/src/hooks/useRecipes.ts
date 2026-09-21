@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { nutritionApi, clientPortalApi } from "../services/api";
@@ -37,7 +38,7 @@ export function useCreateRecipe() {
     mutationFn: (data: object) => nutritionApi.createRecipe(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [RECIPES_KEY] });
-      notifications.show({ title: "Receta creada", message: "La receta ha sido creada correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.recipeCreated"), message: i18next.t("hooks.recipeCreatedMsg"), color: "green" });
     },
   });
 }
@@ -49,7 +50,7 @@ export function useUpdateRecipe() {
       nutritionApi.updateRecipe(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [RECIPES_KEY] });
-      notifications.show({ title: "Receta actualizada", message: "La receta ha sido actualizada correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.recipeUpdated"), message: i18next.t("hooks.recipeUpdatedMsg"), color: "green" });
     },
   });
 }
@@ -60,7 +61,7 @@ export function useDeleteRecipe() {
     mutationFn: (id: string) => nutritionApi.deleteRecipe(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [RECIPES_KEY] });
-      notifications.show({ title: "Receta eliminada", message: "La receta ha sido eliminada", color: "green" });
+      notifications.show({ title: i18next.t("hooks.recipeDeleted"), message: i18next.t("hooks.recipeDeletedMsg"), color: "green" });
     },
   });
 }
@@ -71,7 +72,7 @@ export function useDuplicateRecipe() {
     mutationFn: (id: string) => nutritionApi.duplicateRecipe(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [RECIPES_KEY] });
-      notifications.show({ title: "Receta duplicada", message: "Se ha creado una copia de la receta", color: "green" });
+      notifications.show({ title: i18next.t("hooks.recipeDuplicated"), message: i18next.t("hooks.recipeDuplicatedMsg"), color: "green" });
     },
   });
 }

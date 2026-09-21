@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clientsApi, workoutsApi, nutritionApi } from "../services/api";
@@ -145,8 +146,8 @@ export function useCreateClient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       notifications.show({
-        title: "Cliente creado",
-        message: "El cliente ha sido creado correctamente",
+        title: i18next.t("hooks.clientCreated"),
+        message: i18next.t("hooks.clientCreatedMsg"),
         color: "green",
       });
     },
@@ -170,8 +171,8 @@ export function useUpdateClient() {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["client", variables.id] });
       notifications.show({
-        title: "Cliente actualizado",
-        message: "El cliente ha sido actualizado correctamente",
+        title: i18next.t("hooks.clientUpdated"),
+        message: i18next.t("hooks.clientUpdatedMsg"),
         color: "green",
       });
     },
@@ -193,8 +194,8 @@ export function useDeleteClient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       notifications.show({
-        title: "Cliente eliminado",
-        message: "El cliente ha sido eliminado correctamente",
+        title: i18next.t("hooks.clientDeleted"),
+        message: i18next.t("hooks.clientDeletedMsg"),
         color: "green",
       });
     },
@@ -211,7 +212,7 @@ export function usePermanentDeleteClient() {
     },
     onError: (error: unknown) => {
       notifications.show({
-        title: "Error al eliminar",
+        title: i18next.t("hooks.deleteError"),
         message: getApiErrorMessage(error),
         color: "red",
       });
@@ -227,8 +228,8 @@ export function useRestoreClient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       notifications.show({
-        title: "Cliente restaurado",
-        message: "El cliente ha sido restaurado correctamente",
+        title: i18next.t("hooks.clientRestored"),
+        message: i18next.t("hooks.clientRestoredMsg"),
         color: "green",
       });
     },
@@ -259,8 +260,8 @@ export function useCreateClientTag() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-tags"] });
       notifications.show({
-        title: "Etiqueta creada",
-        message: "La etiqueta ha sido creada correctamente",
+        title: i18next.t("hooks.tagCreated"),
+        message: i18next.t("hooks.tagCreatedMsg"),
         color: "green",
       });
     },

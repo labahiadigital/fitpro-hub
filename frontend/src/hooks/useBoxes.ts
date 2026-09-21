@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { boxesApi } from "../services/api";
@@ -50,7 +51,7 @@ export function useCreateBox() {
     mutationFn: (data: Partial<BoxData>) => boxesApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["boxes"] });
-      notifications.show({ title: "Box creado", message: "El box ha sido creado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.boxCreated"), message: i18next.t("hooks.boxCreatedMsg"), color: "green" });
     },
     onError: (e: unknown) => notifications.show({ title: "Error", message: getApiErrorMessage(e), color: "red" }),
   });
@@ -62,7 +63,7 @@ export function useUpdateBox() {
     mutationFn: ({ id, data }: { id: string; data: Partial<BoxData> }) => boxesApi.update(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["boxes"] });
-      notifications.show({ title: "Box actualizado", message: "Cambios guardados", color: "green" });
+      notifications.show({ title: i18next.t("hooks.boxUpdated"), message: i18next.t("hooks.changesSaved"), color: "green" });
     },
     onError: (e: unknown) => notifications.show({ title: "Error", message: getApiErrorMessage(e), color: "red" }),
   });
@@ -74,7 +75,7 @@ export function useDeleteBox() {
     mutationFn: (id: string) => boxesApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["boxes"] });
-      notifications.show({ title: "Box eliminado", message: "El box ha sido eliminado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.boxDeleted"), message: i18next.t("hooks.boxDeletedMsg"), color: "green" });
     },
   });
 }

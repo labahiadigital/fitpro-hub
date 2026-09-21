@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { erpApi } from "../services/api";
 import { notifications } from "@mantine/notifications";
@@ -204,7 +205,7 @@ export function useCreateInvoice() {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["invoice-stats"] });
       qc.invalidateQueries({ queryKey: ["next-invoice-number"] });
-      notifications.show({ title: "Factura creada", message: "La factura se ha creado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.invoiceCreated"), message: i18next.t("hooks.invoiceCreatedMsg"), color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al crear factura", color: "red" });
@@ -220,7 +221,7 @@ export function useUpdateInvoice() {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["invoice"] });
       qc.invalidateQueries({ queryKey: ["invoice-stats"] });
-      notifications.show({ title: "Factura actualizada", message: "Los cambios se han guardado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.invoiceUpdated"), message: i18next.t("hooks.itemChangesSaved"), color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al actualizar factura", color: "red" });
@@ -235,7 +236,7 @@ export function useDeleteInvoice() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["invoice-stats"] });
-      notifications.show({ title: "Factura eliminada", message: "La factura en borrador ha sido eliminada", color: "green" });
+      notifications.show({ title: i18next.t("hooks.invoiceDeleted"), message: i18next.t("hooks.invoiceDraftDeleted"), color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al eliminar factura", color: "red" });
@@ -251,7 +252,7 @@ export function useFinalizeInvoice() {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["invoice"] });
       qc.invalidateQueries({ queryKey: ["invoice-stats"] });
-      notifications.show({ title: "Factura finalizada", message: "La factura ha sido emitida con hash VeriFactu", color: "green" });
+      notifications.show({ title: i18next.t("hooks.invoiceFinalized"), message: "La factura ha sido emitida con hash VeriFactu", color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al finalizar factura", color: "red" });
@@ -268,7 +269,7 @@ export function useMarkInvoicePaid() {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["invoice"] });
       qc.invalidateQueries({ queryKey: ["invoice-stats"] });
-      notifications.show({ title: "Factura pagada", message: "La factura se ha marcado como pagada", color: "green" });
+      notifications.show({ title: i18next.t("hooks.invoicePaid"), message: i18next.t("hooks.invoicePaidMsg"), color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al marcar como pagada", color: "red" });
@@ -283,7 +284,7 @@ export function useSendInvoiceEmail() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["invoice"] });
-      notifications.show({ title: "Email enviado", message: "La factura se ha enviado por email", color: "green" });
+      notifications.show({ title: i18next.t("hooks.emailSent"), message: i18next.t("hooks.invoiceEmailSent"), color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al enviar email", color: "red" });
@@ -299,7 +300,7 @@ export function useDuplicateInvoice() {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["invoice-stats"] });
       qc.invalidateQueries({ queryKey: ["next-invoice-number"] });
-      notifications.show({ title: "Factura duplicada", message: "Se ha creado una copia como borrador", color: "green" });
+      notifications.show({ title: i18next.t("hooks.invoiceDuplicated"), message: i18next.t("hooks.invoiceDuplicatedMsg"), color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al duplicar factura", color: "red" });
@@ -316,7 +317,7 @@ export function useCreateRectificative() {
       qc.invalidateQueries({ queryKey: ["invoice"] });
       qc.invalidateQueries({ queryKey: ["invoice-stats"] });
       qc.invalidateQueries({ queryKey: ["next-invoice-number"] });
-      notifications.show({ title: "Factura rectificativa creada", message: "Se ha creado la factura rectificativa como borrador", color: "green" });
+      notifications.show({ title: i18next.t("hooks.rectInvoiceCreated"), message: i18next.t("hooks.rectInvoiceCreatedMsg"), color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al crear rectificativa", color: "red" });
@@ -354,7 +355,7 @@ export function useUpdateInvoiceSettings() {
     mutationFn: async (data: object) => erpApi.saveSettings(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoice-settings"] });
-      notifications.show({ title: "Configuración guardada", message: "La configuración de facturación se ha actualizado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.configSaved"), message: i18next.t("hooks.billingConfigUpdated"), color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al guardar configuración", color: "red" });
@@ -387,7 +388,7 @@ export function useUploadCertificate() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["certificate-status"] });
       qc.invalidateQueries({ queryKey: ["invoice-settings"] });
-      notifications.show({ title: "Certificado subido", message: "El certificado se ha configurado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.certificateUploaded"), message: i18next.t("hooks.certificateConfigured"), color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al subir el certificado", color: "red" });
@@ -402,7 +403,7 @@ export function useRevokeCertificate() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["certificate-status"] });
       qc.invalidateQueries({ queryKey: ["invoice-settings"] });
-      notifications.show({ title: "Certificado revocado", message: "El certificado ha sido eliminado de forma segura", color: "green" });
+      notifications.show({ title: i18next.t("hooks.certificateRevoked"), message: i18next.t("hooks.certificateRevokedMsg"), color: "green" });
     },
     onError: (e: any) => {
       notifications.show({ title: "Error", message: e?.response?.data?.detail || "Error al revocar el certificado", color: "red" });

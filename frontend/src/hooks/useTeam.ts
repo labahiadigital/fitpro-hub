@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, usersApi } from "../services/api";
 import { notifications } from "@mantine/notifications";
@@ -69,14 +70,14 @@ export function useInviteTeamMember() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       notifications.show({
-        title: "Invitación enviada",
-        message: "Se ha enviado la invitación por email correctamente",
+        title: i18next.t("hooks.invitationSent"),
+        message: i18next.t("hooks.teamInviteSentMsg"),
         color: "green",
       });
     },
     onError: (error: unknown) => {
       notifications.show({
-        title: "Error al enviar invitación",
+        title: i18next.t("hooks.teamInviteError"),
         message: extractErrorMessage(error, "No se pudo enviar la invitación"),
         color: "red",
       });
@@ -109,14 +110,14 @@ export function useUpdateMemberPermissions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       notifications.show({
-        title: "Permisos actualizados",
-        message: "Los permisos del miembro se han actualizado correctamente",
+        title: i18next.t("hooks.permissionsUpdated"),
+        message: i18next.t("hooks.permissionsUpdatedMsg"),
         color: "green",
       });
     },
     onError: (error: unknown) => {
       notifications.show({
-        title: "Error al actualizar permisos",
+        title: i18next.t("hooks.permissionsUpdateError"),
         message: extractErrorMessage(error, "No se pudieron actualizar los permisos"),
         color: "red",
       });
@@ -134,14 +135,14 @@ export function useRemoveTeamMember() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       notifications.show({
-        title: "Miembro eliminado",
-        message: "El miembro ha sido eliminado del equipo",
+        title: i18next.t("hooks.memberRemoved"),
+        message: i18next.t("hooks.memberRemovedMsg"),
         color: "green",
       });
     },
     onError: (error: unknown) => {
       notifications.show({
-        title: "Error al eliminar miembro",
+        title: i18next.t("hooks.memberRemoveError"),
         message: extractErrorMessage(error, "No se pudo eliminar al miembro"),
         color: "red",
       });
@@ -161,14 +162,14 @@ export function useResendInvitation() {
     },
     onSuccess: () => {
       notifications.show({
-        title: "Invitación reenviada",
-        message: "Se ha reenviado la invitación por email",
+        title: i18next.t("hooks.invitationResent"),
+        message: i18next.t("hooks.teamInviteResent"),
         color: "green",
       });
     },
     onError: (error: unknown) => {
       notifications.show({
-        title: "Error al reenviar",
+        title: i18next.t("hooks.resendError"),
         message: extractErrorMessage(error, "No se pudo reenviar la invitación"),
         color: "red",
       });

@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
 import { useAuthStore } from "../stores/auth";
@@ -163,38 +164,38 @@ export function useAutomationLogs(automationId: string) {
 export function useTriggerTypes() {
   return [
     {
-      group: "Clientes",
+      group: i18next.t("automations.clientes"),
       items: [
-        { value: "client_created", label: "Se crea un cliente" },
-        { value: "client_inactive", label: "Cliente inactivo (X días)" },
-        { value: "client_birthday", label: "Cumpleaños del cliente" },
+        { value: "client_created", label: i18next.t("automations.seCreaUnCliente") },
+        { value: "client_inactive", label: i18next.t("automations.clienteInactivo") },
+        { value: "client_birthday", label: i18next.t("automations.cumpleanos") },
       ],
     },
     {
-      group: "Reservas",
+      group: i18next.t("automations.reservas"),
       items: [
-        { value: "booking_created", label: "Se crea una reserva" },
-        { value: "booking_reminder", label: "Recordatorio de reserva" },
-        { value: "booking_cancelled", label: "Se cancela una reserva" },
-        { value: "booking_completed", label: "Se completa una sesión" },
-        { value: "booking_no_show", label: "Cliente no asiste" },
+        { value: "booking_created", label: i18next.t("automations.seCreaReserva") },
+        { value: "booking_reminder", label: i18next.t("automations.recordatorioReserva") },
+        { value: "booking_cancelled", label: i18next.t("automations.seCancelaReserva") },
+        { value: "booking_completed", label: i18next.t("automations.seCompletaSesion") },
+        { value: "booking_no_show", label: i18next.t("automations.clienteNoAsiste") },
       ],
     },
     {
-      group: "Pagos",
+      group: i18next.t("automations.pagos"),
       items: [
-        { value: "payment_received", label: "Pago recibido" },
-        { value: "payment_failed", label: "Pago fallido" },
-        { value: "subscription_renewal", label: "Renovación próxima" },
-        { value: "subscription_cancelled", label: "Suscripción cancelada" },
+        { value: "payment_received", label: i18next.t("automations.pagoRecibido") },
+        { value: "payment_failed", label: i18next.t("automations.pagoFallido") },
+        { value: "subscription_renewal", label: i18next.t("automations.renovacionProxima") },
+        { value: "subscription_cancelled", label: i18next.t("hooks.subscriptionCanceled") },
       ],
     },
     {
-      group: "Contenido",
+      group: i18next.t("automations.contenido"),
       items: [
-        { value: "form_submitted", label: "Formulario enviado" },
-        { value: "workout_completed", label: "Entrenamiento completado" },
-        { value: "goal_achieved", label: "Objetivo alcanzado" },
+        { value: "form_submitted", label: i18next.t("automations.formularioEnviado") },
+        { value: "workout_completed", label: i18next.t("automations.entrenamientoCompletado") },
+        { value: "goal_achieved", label: i18next.t("automations.objetivoAlcanzado") },
       ],
     },
   ];
@@ -202,15 +203,15 @@ export function useTriggerTypes() {
 
 export function useActionTypes() {
   return [
-    { value: "send_email", label: "Enviar email", icon: "mail" },
-    { value: "send_in_app", label: "Enviar notificación in-app", icon: "bell" },
-    { value: "create_task", label: "Crear tarea", icon: "clipboard" },
-    { value: "send_form", label: "Enviar formulario", icon: "forms" },
+    { value: "send_email", label: i18next.t("automations.enviarEmail"), icon: "mail" },
+    { value: "send_in_app", label: i18next.t("automations.enviarNotificacion"), icon: "bell" },
+    { value: "create_task", label: i18next.t("automations.crearTarea"), icon: "clipboard" },
+    { value: "send_form", label: i18next.t("automations.enviarFormulario"), icon: "forms" },
     {
       value: "update_tag",
-      label: "Actualizar etiqueta del cliente",
+      label: i18next.t("automations.actualizarEtiqueta"),
       icon: "tag",
     },
-    { value: "webhook", label: "Llamar webhook externo", icon: "webhook" },
+    { value: "webhook", label: i18next.t("automations.llamarWebhook"), icon: "webhook" },
   ];
 }

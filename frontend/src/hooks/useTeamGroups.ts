@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
@@ -52,10 +53,10 @@ export function useCreateGroup() {
     mutationFn: async (data: CreateGroupData) => api.post("/team/groups", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-groups"] });
-      notifications.show({ title: "Grupo creado", message: "El grupo se ha creado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.groupCreated"), message: i18next.t("hooks.groupCreatedMsg"), color: "green" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo crear el grupo", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.groupCreateFailed"), color: "red" });
     },
   });
 }
@@ -69,7 +70,7 @@ export function useUpdateGroup() {
       queryClient.invalidateQueries({ queryKey: ["team-groups"] });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo actualizar el grupo", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.groupUpdateFailed"), color: "red" });
     },
   });
 }
@@ -80,10 +81,10 @@ export function useDeleteGroup() {
     mutationFn: async (id: string) => api.delete(`/team/groups/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-groups"] });
-      notifications.show({ title: "Grupo eliminado", message: "El grupo se ha eliminado", color: "orange" });
+      notifications.show({ title: i18next.t("hooks.groupDeleted"), message: i18next.t("hooks.groupDeletedMsg"), color: "orange" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo eliminar el grupo", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.groupDeleteFailed"), color: "red" });
     },
   });
 }
@@ -97,7 +98,7 @@ export function useAddGroupMembers() {
       queryClient.invalidateQueries({ queryKey: ["team-groups"] });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo añadir miembros", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.addMembersFailed"), color: "red" });
     },
   });
 }
@@ -111,7 +112,7 @@ export function useRemoveGroupMember() {
       queryClient.invalidateQueries({ queryKey: ["team-groups"] });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo quitar el miembro", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.removeMemberFailed"), color: "red" });
     },
   });
 }
@@ -123,10 +124,10 @@ export function useUpdateGroupPermissions() {
       api.patch(`/team/groups/${groupId}/permissions`, { permissions }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-groups"] });
-      notifications.show({ title: "Permisos actualizados", message: "Los permisos del grupo se han actualizado", color: "green" });
+      notifications.show({ title: i18next.t("hooks.permissionsUpdated"), message: i18next.t("hooks.groupPermissionsUpdated"), color: "green" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo actualizar los permisos", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.groupPermissionsUpdateFailed"), color: "red" });
     },
   });
 }

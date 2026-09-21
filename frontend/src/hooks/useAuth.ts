@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -47,7 +48,7 @@ export function useAuth() {
 
       notifications.show({
         title: "¡Bienvenido!",
-        message: "Has iniciado sesión correctamente",
+        message: i18next.t("hooks.loginSuccess"),
         color: "green",
       });
 
@@ -68,7 +69,7 @@ export function useAuth() {
       
       if (err.response?.status === 403 && message.includes("verificar")) {
         notifications.show({
-          title: "Email no verificado",
+          title: i18next.t("hooks.emailNotVerified"),
           message: "Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.",
           color: "orange",
           autoClose: 10000,
@@ -130,7 +131,7 @@ export function useAuth() {
 
       notifications.show({
         title: "¡Cuenta creada!",
-        message: "Tu cuenta ha sido creada correctamente",
+        message: i18next.t("hooks.accountCreated"),
         color: "green",
       });
 
@@ -181,7 +182,7 @@ export function useAuth() {
       navigate("/dashboard");
 
       notifications.show({
-        title: "Workspace cambiado",
+        title: i18next.t("hooks.workspaceChanged"),
         message: `Ahora estás en ${userData.workspaces?.find((w: { id: string }) => w.id === workspaceId)?.name || "otro workspace"}`,
         color: "teal",
       });
@@ -214,8 +215,8 @@ export function useAuth() {
       navigate("/login");
 
       notifications.show({
-        title: "Sesión cerrada",
-        message: "Has cerrado sesión correctamente",
+        title: i18next.t("hooks.sessionClosed"),
+        message: i18next.t("hooks.logoutSuccess"),
         color: "blue",
       });
     } catch (error: unknown) {
@@ -235,7 +236,7 @@ export function useAuth() {
     try {
       await authApi.forgotPassword(email);
       notifications.show({
-        title: "Email enviado",
+        title: i18next.t("hooks.emailSent"),
         message: "Si el email está registrado, recibirás instrucciones para restablecer tu contraseña.",
         color: "green",
       });
@@ -311,7 +312,7 @@ export function useAuth() {
     try {
       await authApi.resendVerification(email);
       notifications.show({
-        title: "Email enviado",
+        title: i18next.t("hooks.emailSent"),
         message: "Si el email está registrado, recibirás un enlace de verificación.",
         color: "green",
       });

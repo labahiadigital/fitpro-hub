@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
@@ -92,7 +93,7 @@ export function useCreateTask() {
     mutationFn: async (data: CreateTaskData) => api.post("/tasks", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      notifications.show({ title: "Tarea creada", message: "La tarea se ha creado correctamente", color: "green" });
+      notifications.show({ title: i18next.t("hooks.taskCreated"), message: i18next.t("hooks.taskCreatedMsg"), color: "green" });
     },
     onError: (error: any) => {
       const detail = error?.response?.data?.detail || "No se pudo crear la tarea";
@@ -110,7 +111,7 @@ export function useUpdateTask() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo actualizar la tarea", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.taskUpdateFailed"), color: "red" });
     },
   });
 }
@@ -124,7 +125,7 @@ export function useUpdateTaskStatus() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo mover la tarea", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.taskMoveFailed"), color: "red" });
     },
   });
 }
@@ -135,10 +136,10 @@ export function useArchiveTask() {
     mutationFn: async (id: string) => api.patch(`/tasks/${id}/archive`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      notifications.show({ title: "Tarea archivada", message: "La tarea se ha archivado", color: "blue" });
+      notifications.show({ title: i18next.t("hooks.taskArchived"), message: i18next.t("hooks.taskArchivedMsg"), color: "blue" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo archivar la tarea", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.taskArchiveFailed"), color: "red" });
     },
   });
 }
@@ -149,10 +150,10 @@ export function useDeleteTask() {
     mutationFn: async (id: string) => api.delete(`/tasks/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      notifications.show({ title: "Tarea eliminada", message: "La tarea se ha eliminado", color: "orange" });
+      notifications.show({ title: i18next.t("hooks.taskDeleted"), message: i18next.t("hooks.taskDeletedMsg"), color: "orange" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo eliminar la tarea", color: "red" });
+      notifications.show({ title: "Error", message: i18next.t("hooks.taskDeleteFailed"), color: "red" });
     },
   });
 }

@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clientsApi } from "../services/api";
 import { notifications } from "@mantine/notifications";
@@ -41,8 +42,8 @@ export function useCreateInvitation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-invitations"] });
       notifications.show({
-        title: "Invitación enviada",
-        message: "El cliente recibirá un email con el enlace de registro",
+        title: i18next.t("hooks.invitationSent"),
+        message: i18next.t("hooks.invitationSentMsg"),
         color: "green",
       });
     },
@@ -68,8 +69,8 @@ export function useResendInvitation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-invitations"] });
       notifications.show({
-        title: "Invitación reenviada",
-        message: "Se ha enviado un nuevo email al cliente",
+        title: i18next.t("hooks.invitationResent"),
+        message: i18next.t("hooks.invitationResentMsg"),
         color: "green",
       });
     },
@@ -94,8 +95,8 @@ export function useCancelInvitation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-invitations"] });
       notifications.show({
-        title: "Invitación cancelada",
-        message: "La invitación ha sido cancelada",
+        title: i18next.t("hooks.invitationCanceled"),
+        message: i18next.t("hooks.invitationCanceledMsg"),
         color: "blue",
       });
     },
