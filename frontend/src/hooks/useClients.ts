@@ -462,3 +462,32 @@ export function useClientNutritionLogs(
     staleTime: 60 * 1000,
   });
 }
+
+export function useCreateClientMeasurement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clientId, data }: { clientId: string; data: any }) =>
+      clientsApi.createMeasurement(clientId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["client-measurements", variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ["client-progress-summary", variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ["client", variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+    },
+  });
+}
+
+export function useDeleteClientMeasurement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clientId, measurementId }: { clientId: string; measurementId: string }) =>
+      clientsApi.deleteMeasurement(clientId, measurementId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["client-measurements", variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ["client-progress-summary", variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ["client", variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+    },
+  });
+}
+

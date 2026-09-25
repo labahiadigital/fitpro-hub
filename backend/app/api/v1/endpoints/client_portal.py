@@ -458,8 +458,8 @@ class MeasurementResponse(BaseModel):
     weight_kg: Optional[float] = None
     body_fat_percentage: Optional[float] = None
     muscle_mass_kg: Optional[float] = None
-    measurements: dict = {}
-    photos: List[dict] = []
+    measurements: Optional[dict] = {}
+    photos: Optional[List[dict]] = []
     notes: Optional[str] = None
     created_at: datetime
     
@@ -632,17 +632,17 @@ async def get_client_dashboard(
         .order_by(desc(MealPlan.created_at))
         .limit(1)
     )
-    # Latest measurement (for current weight on the dashboard)
+    # Latest measurement with weight (for current weight on the dashboard)
     latest_meas_q = (
         select(ClientMeasurement)
-        .where(ClientMeasurement.client_id == client_id)
+        .where(ClientMeasurement.client_id == client_id, ClientMeasurement.weight_kg.isnot(None))
         .order_by(desc(ClientMeasurement.measured_at), desc(ClientMeasurement.created_at))
         .limit(1)
     )
-    # First measurement (baseline for progress calculation)
+    # First measurement with weight (baseline for progress calculation)
     first_meas_q = (
         select(ClientMeasurement)
-        .where(ClientMeasurement.client_id == client_id)
+        .where(ClientMeasurement.client_id == client_id, ClientMeasurement.weight_kg.isnot(None))
         .order_by(ClientMeasurement.measured_at.asc().nulls_last(), ClientMeasurement.created_at.asc())
         .limit(1)
     )
@@ -2783,19 +2783,24 @@ async def get_progress_summary(
     )
     measurements = result.scalars().all()
     
-    latest = measurements[0] if measurements else None
-    first = measurements[-1] if measurements else None
-    
+    latest_weight = next((float(m.weight_kg) for m in measurements if m.weight_kg is not None), None)
+    latest_bf = next((float(m.body_fat_percentage) for m in measurements if m.body_fat_percentage is not None), None)
+    latest_muscle = next((float(m.muscle_mass_kg) for m in measurements if m.muscle_mass_kg is not None), None)
+
+    first_weight = next((float(m.weight_kg) for m in reversed(measurements) if m.weight_kg is not None), None)
+    first_bf = next((float(m.body_fat_percentage) for m in reversed(measurements) if m.body_fat_percentage is not None), None)
+    first_muscle = next((float(m.muscle_mass_kg) for m in reversed(measurements) if m.muscle_mass_kg is not None), None)
+
     return {
         "current_stats": {
-            "weight": float(latest.weight_kg) if latest and latest.weight_kg else float(client.weight_kg or 0),
-            "body_fat": float(latest.body_fat_percentage) if latest and latest.body_fat_percentage else None,
-            "muscle_mass": float(latest.muscle_mass_kg) if latest and latest.muscle_mass_kg else None,
+            "weight": latest_weight if latest_weight is not None else float(client.weight_kg or 0),
+            "body_fat": latest_bf,
+            "muscle_mass": latest_muscle,
         },
         "start_stats": {
-            "weight": float(first.weight_kg) if first and first.weight_kg else float(client.weight_kg or 0),
-            "body_fat": float(first.body_fat_percentage) if first and first.body_fat_percentage else None,
-            "muscle_mass": float(first.muscle_mass_kg) if first and first.muscle_mass_kg else None,
+            "weight": first_weight if first_weight is not None else float(client.weight_kg or 0),
+            "body_fat": first_bf,
+            "muscle_mass": first_muscle,
         },
         "target_stats": {
             "weight": client.health_data.get("goal_weight_kg") if client.health_data else None,

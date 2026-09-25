@@ -5,7 +5,7 @@ from uuid import UUID
 from datetime import datetime, timedelta, timezone
 import secrets
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, and_, case
 from sqlalchemy.orm import selectinload
@@ -36,6 +36,7 @@ from app.services.onboarding import (
     attach_onboarding_progress_photo,
     enrich_onboarding_health_data,
 )
+from app.services.audit import log_audit
 
 logger = logging.getLogger(__name__)
 
@@ -95,13 +96,31 @@ class ClientMeasurementResponse(BaseModel):
     weight_kg: Optional[float] = None
     body_fat_percentage: Optional[float] = None
     muscle_mass_kg: Optional[float] = None
-    measurements: dict = {}
-    photos: List[dict] = []
+    measurements: Optional[dict] = {}
+    photos: Optional[List[dict]] = []
     notes: Optional[str] = None
     created_at: datetime
     
     class Config:
         from_attributes = True
+
+
+class ClientMeasurementCreateStaff(BaseModel):
+    measured_at: Optional[str] = None  # ISO string or YYYY-MM-DD
+    weight_kg: Optional[float] = None
+    body_fat_percentage: Optional[float] = None
+    muscle_mass_kg: Optional[float] = None
+    measurements: Optional[dict] = None  # {chest, waist, hips, arms, thighs, etc.}
+    notes: Optional[str] = None
+
+
+class ClientMeasurementUpdateStaff(BaseModel):
+    measured_at: Optional[str] = None
+    weight_kg: Optional[float] = None
+    body_fat_percentage: Optional[float] = None
+    muscle_mass_kg: Optional[float] = None
+    measurements: Optional[dict] = None
+    notes: Optional[str] = None
 
 
 class ClientPhotoResponse(BaseModel):
@@ -945,6 +964,281 @@ async def get_client_measurements(
     ]
 
 
+@router.post("/{client_id}/measurements", response_model=ClientMeasurementResponse, status_code=status.HTTP_201_CREATED)
+async def create_client_measurement_staff(
+    client_id: UUID,
+    data: ClientMeasurementCreateStaff,
+    request: Request,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Registrar una medición para un cliente desde el panel de staff / entrenador.
+    Permite upsert si ya existe una medición en la misma fecha (hace merge conservando fotos previas).
+    """
+    client = await db.get(Client, client_id)
+    if not client or client.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    measured_at_dt = None
+    if data.measured_at:
+        try:
+            measured_at_dt = datetime.fromisoformat(data.measured_at.replace('Z', '+00:00'))
+        except ValueError:
+            try:
+                measured_at_dt = datetime.strptime(data.measured_at, "%Y-%m-%d")
+            except ValueError:
+                measured_at_dt = datetime.utcnow()
+    else:
+        measured_at_dt = datetime.utcnow()
+
+    if measured_at_dt.tzinfo is not None:
+        measured_at_dt = measured_at_dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+    day_start = measured_at_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_end = day_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    existing_result = await db.execute(
+        select(ClientMeasurement)
+        .where(
+            ClientMeasurement.client_id == client.id,
+            ClientMeasurement.measured_at >= day_start,
+            ClientMeasurement.measured_at <= day_end,
+        )
+        .order_by(ClientMeasurement.measured_at.desc())
+        .limit(1)
+    )
+    existing = existing_result.scalar_one_or_none()
+
+    action = "update" if existing else "create"
+    old_values = None
+    if existing:
+        old_values = {
+            "weight_kg": float(existing.weight_kg) if existing.weight_kg is not None else None,
+            "body_fat_percentage": float(existing.body_fat_percentage) if existing.body_fat_percentage is not None else None,
+            "muscle_mass_kg": float(existing.muscle_mass_kg) if existing.muscle_mass_kg is not None else None,
+            "measurements": dict(existing.measurements or {}),
+            "notes": existing.notes,
+        }
+        if data.weight_kg is not None:
+            existing.weight_kg = data.weight_kg
+            client.weight_kg = data.weight_kg
+        if data.body_fat_percentage is not None:
+            existing.body_fat_percentage = data.body_fat_percentage
+        if data.muscle_mass_kg is not None:
+            existing.muscle_mass_kg = data.muscle_mass_kg
+        if data.notes is not None:
+            existing.notes = data.notes
+        if data.measurements is not None:
+            current_meas = dict(existing.measurements or {})
+            for k, v in data.measurements.items():
+                if v is not None and v != "":
+                    try:
+                        current_meas[k] = float(v)
+                    except (ValueError, TypeError):
+                        current_meas[k] = v
+            existing.measurements = current_meas
+            flag_modified(existing, "measurements")
+        measurement = existing
+    else:
+        parsed_meas = {}
+        if data.measurements:
+            for k, v in data.measurements.items():
+                if v is not None and v != "":
+                    try:
+                        parsed_meas[k] = float(v)
+                    except (ValueError, TypeError):
+                        parsed_meas[k] = v
+
+        measurement = ClientMeasurement(
+            client_id=client.id,
+            measured_at=measured_at_dt,
+            weight_kg=data.weight_kg,
+            body_fat_percentage=data.body_fat_percentage,
+            muscle_mass_kg=data.muscle_mass_kg,
+            measurements=parsed_meas,
+            photos=[],
+            notes=data.notes,
+        )
+        db.add(measurement)
+        if data.weight_kg is not None:
+            client.weight_kg = data.weight_kg
+
+    new_values = {
+        "weight_kg": float(measurement.weight_kg) if measurement.weight_kg is not None else None,
+        "body_fat_percentage": float(measurement.body_fat_percentage) if measurement.body_fat_percentage is not None else None,
+        "muscle_mass_kg": float(measurement.muscle_mass_kg) if measurement.muscle_mass_kg is not None else None,
+        "measurements": measurement.measurements or {},
+        "notes": measurement.notes,
+    }
+
+    await log_audit(
+        db,
+        workspace_id=current_user.workspace_id,
+        user_id=current_user.id,
+        action=action,
+        table_name="client_measurements",
+        record_id=measurement.id,
+        old_values=old_values,
+        new_values=new_values,
+        request=request,
+        extra_data={"client_id": str(client.id), "registered_by": "staff"},
+    )
+
+    await db.commit()
+    await db.refresh(measurement)
+
+    return ClientMeasurementResponse(
+        id=measurement.id,
+        client_id=measurement.client_id,
+        measured_at=measurement.measured_at,
+        weight_kg=float(measurement.weight_kg) if measurement.weight_kg else None,
+        body_fat_percentage=float(measurement.body_fat_percentage) if measurement.body_fat_percentage else None,
+        muscle_mass_kg=float(measurement.muscle_mass_kg) if measurement.muscle_mass_kg else None,
+        measurements=measurement.measurements or {},
+        photos=measurement.photos or [],
+        notes=measurement.notes,
+        created_at=measurement.created_at,
+    )
+
+
+@router.put("/{client_id}/measurements/{measurement_id}", response_model=ClientMeasurementResponse)
+async def update_client_measurement_staff(
+    client_id: UUID,
+    measurement_id: UUID,
+    data: ClientMeasurementUpdateStaff,
+    request: Request,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Editar una medición existente de un cliente (staff)."""
+    client = await db.get(Client, client_id)
+    if not client or client.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    measurement = await db.get(ClientMeasurement, measurement_id)
+    if not measurement or measurement.client_id != client.id:
+        raise HTTPException(status_code=404, detail="Medición no encontrada")
+
+    old_values = {
+        "weight_kg": float(measurement.weight_kg) if measurement.weight_kg is not None else None,
+        "body_fat_percentage": float(measurement.body_fat_percentage) if measurement.body_fat_percentage is not None else None,
+        "muscle_mass_kg": float(measurement.muscle_mass_kg) if measurement.muscle_mass_kg is not None else None,
+        "measurements": dict(measurement.measurements or {}),
+        "notes": measurement.notes,
+        "measured_at": measurement.measured_at.isoformat() if measurement.measured_at else None,
+    }
+
+    if data.measured_at:
+        try:
+            dt = datetime.fromisoformat(data.measured_at.replace('Z', '+00:00'))
+        except ValueError:
+            dt = datetime.strptime(data.measured_at, "%Y-%m-%d")
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        measurement.measured_at = dt
+
+    if data.weight_kg is not None:
+        measurement.weight_kg = data.weight_kg
+        client.weight_kg = data.weight_kg
+    if data.body_fat_percentage is not None:
+        measurement.body_fat_percentage = data.body_fat_percentage
+    if data.muscle_mass_kg is not None:
+        measurement.muscle_mass_kg = data.muscle_mass_kg
+    if data.notes is not None:
+        measurement.notes = data.notes
+    if data.measurements is not None:
+        current_meas = dict(measurement.measurements or {})
+        for k, v in data.measurements.items():
+            if v is not None and v != "":
+                try:
+                    current_meas[k] = float(v)
+                except (ValueError, TypeError):
+                    current_meas[k] = v
+        measurement.measurements = current_meas
+        flag_modified(measurement, "measurements")
+
+    new_values = {
+        "weight_kg": float(measurement.weight_kg) if measurement.weight_kg is not None else None,
+        "body_fat_percentage": float(measurement.body_fat_percentage) if measurement.body_fat_percentage is not None else None,
+        "muscle_mass_kg": float(measurement.muscle_mass_kg) if measurement.muscle_mass_kg is not None else None,
+        "measurements": measurement.measurements or {},
+        "notes": measurement.notes,
+        "measured_at": measurement.measured_at.isoformat() if measurement.measured_at else None,
+    }
+
+    await log_audit(
+        db,
+        workspace_id=current_user.workspace_id,
+        user_id=current_user.id,
+        action="update",
+        table_name="client_measurements",
+        record_id=measurement.id,
+        old_values=old_values,
+        new_values=new_values,
+        request=request,
+        extra_data={"client_id": str(client.id), "updated_by": "staff"},
+    )
+
+    await db.commit()
+    await db.refresh(measurement)
+
+    return ClientMeasurementResponse(
+        id=measurement.id,
+        client_id=measurement.client_id,
+        measured_at=measurement.measured_at,
+        weight_kg=float(measurement.weight_kg) if measurement.weight_kg else None,
+        body_fat_percentage=float(measurement.body_fat_percentage) if measurement.body_fat_percentage else None,
+        muscle_mass_kg=float(measurement.muscle_mass_kg) if measurement.muscle_mass_kg else None,
+        measurements=measurement.measurements or {},
+        photos=measurement.photos or [],
+        notes=measurement.notes,
+        created_at=measurement.created_at,
+    )
+
+
+@router.delete("/{client_id}/measurements/{measurement_id}")
+async def delete_client_measurement_staff(
+    client_id: UUID,
+    measurement_id: UUID,
+    request: Request,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Eliminar una medición de cliente (staff)."""
+    client = await db.get(Client, client_id)
+    if not client or client.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    measurement = await db.get(ClientMeasurement, measurement_id)
+    if not measurement or measurement.client_id != client.id:
+        raise HTTPException(status_code=404, detail="Medición no encontrada")
+
+    old_values = {
+        "weight_kg": float(measurement.weight_kg) if measurement.weight_kg is not None else None,
+        "measured_at": measurement.measured_at.isoformat() if measurement.measured_at else None,
+        "measurements": measurement.measurements or {},
+        "notes": measurement.notes,
+    }
+
+    await log_audit(
+        db,
+        workspace_id=current_user.workspace_id,
+        user_id=current_user.id,
+        action="delete",
+        table_name="client_measurements",
+        record_id=measurement.id,
+        old_values=old_values,
+        new_values=None,
+        request=request,
+        extra_data={"client_id": str(client.id), "deleted_by": "staff"},
+    )
+
+    await db.delete(measurement)
+    await db.commit()
+
+    return {"success": True, "id": str(measurement_id)}
+
+
 @router.get("/{client_id}/photos", response_model=List[ClientPhotoResponse])
 async def get_client_photos(
     client_id: UUID,
@@ -1044,20 +1338,26 @@ async def get_client_progress_summary(
     )
 
     measurements_count = (await db.execute(count_stmt)).scalar() or 0
-    latest = (await db.execute(latest_stmt)).scalar_one_or_none()
-    first = (await db.execute(first_stmt)).scalar_one_or_none()
     history_desc = (await db.execute(history_stmt)).scalars().all()
+
+    latest_weight = next((float(m.weight_kg) for m in history_desc if m.weight_kg is not None), None)
+    latest_bf = next((float(m.body_fat_percentage) for m in history_desc if m.body_fat_percentage is not None), None)
+    latest_muscle = next((float(m.muscle_mass_kg) for m in history_desc if m.muscle_mass_kg is not None), None)
+
+    first_weight = next((float(m.weight_kg) for m in reversed(history_desc) if m.weight_kg is not None), None)
+    first_bf = next((float(m.body_fat_percentage) for m in reversed(history_desc) if m.body_fat_percentage is not None), None)
+    first_muscle = next((float(m.muscle_mass_kg) for m in reversed(history_desc) if m.muscle_mass_kg is not None), None)
 
     return {
         "current_stats": {
-            "weight": float(latest.weight_kg) if latest and latest.weight_kg else float(client.weight_kg or 0),
-            "body_fat": float(latest.body_fat_percentage) if latest and latest.body_fat_percentage else None,
-            "muscle_mass": float(latest.muscle_mass_kg) if latest and latest.muscle_mass_kg else None,
+            "weight": latest_weight if latest_weight is not None else float(client.weight_kg or 0),
+            "body_fat": latest_bf,
+            "muscle_mass": latest_muscle,
         },
         "start_stats": {
-            "weight": float(first.weight_kg) if first and first.weight_kg else float(client.weight_kg or 0),
-            "body_fat": float(first.body_fat_percentage) if first and first.body_fat_percentage else None,
-            "muscle_mass": float(first.muscle_mass_kg) if first and first.muscle_mass_kg else None,
+            "weight": first_weight if first_weight is not None else float(client.weight_kg or 0),
+            "body_fat": first_bf,
+            "muscle_mass": first_muscle,
         },
         "target_stats": {
             "weight": client.health_data.get("goal_weight_kg") if client.health_data else None,

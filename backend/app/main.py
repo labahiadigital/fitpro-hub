@@ -20,6 +20,16 @@ from app.middleware.permissions import PermissionsMiddleware
 
 import sys
 
+class HealthCheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            msg = record.getMessage()
+            # Silenciar peticiones periódicas de healthcheck que saturan los logs cada 10s
+            return "/health" not in msg and "/healthz" not in msg
+        except Exception:
+            return True
+
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
@@ -33,7 +43,17 @@ def setup_logging():
     logging.getLogger("api.access").setLevel(logging.INFO)
     logging.getLogger("uvicorn").setLevel(logging.INFO)
     logging.getLogger("uvicorn.error").setLevel(logging.INFO)
-    logging.getLogger("uvicorn.access").setLevel(logging.INFO)
+
+    health_filter = HealthCheckFilter()
+    for logger_name in ("uvicorn.access", "gunicorn.access"):
+        log_obj = logging.getLogger(logger_name)
+        log_obj.setLevel(logging.INFO)
+        if not any(isinstance(f, HealthCheckFilter) for f in log_obj.filters):
+            log_obj.addFilter(health_filter)
+        for h in log_obj.handlers:
+            if not any(isinstance(f, HealthCheckFilter) for f in h.filters):
+                h.addFilter(health_filter)
+
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
     logging.getLogger("alembic.runtime.plugins").setLevel(logging.WARNING)
 
@@ -122,6 +142,7 @@ def _run_alembic_upgrade():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
     logger.info("Starting %s (env=%s)...", settings.APP_NAME, settings.APP_ENV)
     logger.info("REDIS_URL target -> %s", _mask_url(settings.REDIS_URL))
     logger.info("DATABASE_URL target -> %s", _mask_url(settings.DATABASE_URL) if settings.DATABASE_URL else "(empty)")

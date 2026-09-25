@@ -82,7 +82,7 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
-import { useClient, useUpdateClient, useDeleteClient, useClientMeasurements, useClientPhotos, useClientProgressSummary, useClientWorkoutLogs, useClientNutritionLogs } from "../../hooks/useClients";
+import { useClient, useUpdateClient, useDeleteClient, useClientMeasurements, useClientPhotos, useClientProgressSummary, useClientWorkoutLogs, useClientNutritionLogs, useCreateClientMeasurement, useDeleteClientMeasurement } from "../../hooks/useClients";
 import { useTasksList, useDeleteTask, type Task as TaskType } from "../../hooks/useTasks";
 import { useTeamMembers } from "../../hooks/useTeam";
 import { 
@@ -1048,6 +1048,90 @@ export function ClientDetailPage() {
     assignSupplementModalOpened,
     { open: openAssignSupplementModal, close: closeAssignSupplementModal },
   ] = useDisclosure(false);
+
+  // Modal de registro de medidas por el staff / entrenador
+  const [measurementModalOpened, { open: openMeasurementModal, close: closeMeasurementModal }] = useDisclosure(false);
+  const [measDate, setMeasDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [measWeight, setMeasWeight] = useState<number | "">("");
+  const [measBodyFat, setMeasBodyFat] = useState<number | "">("");
+  const [measMuscleMass, setMeasMuscleMass] = useState<number | "">("");
+  const [measChest, setMeasChest] = useState<number | "">("");
+  const [measWaist, setMeasWaist] = useState<number | "">("");
+  const [measHips, setMeasHips] = useState<number | "">("");
+  const [measArms, setMeasArms] = useState<number | "">("");
+  const [measThighs, setMeasThighs] = useState<number | "">("");
+  const [measCalves, setMeasCalves] = useState<number | "">("");
+  const [measNotes, setMeasNotes] = useState<string>("");
+
+  const createMeasurementMutation = useCreateClientMeasurement();
+  const deleteMeasurementMutation = useDeleteClientMeasurement();
+
+  const handleOpenAddMeasurement = () => {
+    setMeasDate(new Date().toISOString().split("T")[0]);
+    setMeasWeight(client?.weight_kg || "");
+    setMeasBodyFat("");
+    setMeasMuscleMass("");
+    setMeasChest("");
+    setMeasWaist("");
+    setMeasHips("");
+    setMeasArms("");
+    setMeasThighs("");
+    setMeasCalves("");
+    setMeasNotes("");
+    openMeasurementModal();
+  };
+
+  const handleSaveMeasurement = async () => {
+    if (!id) return;
+    try {
+      const payload: any = {
+        measured_at: measDate || new Date().toISOString().split("T")[0],
+        weight_kg: measWeight !== "" ? Number(measWeight) : null,
+        body_fat_percentage: measBodyFat !== "" ? Number(measBodyFat) : null,
+        muscle_mass_kg: measMuscleMass !== "" ? Number(measMuscleMass) : null,
+        notes: measNotes ? measNotes.trim() : null,
+        measurements: {},
+      };
+      if (measChest !== "") payload.measurements.chest = Number(measChest);
+      if (measWaist !== "") payload.measurements.waist = Number(measWaist);
+      if (measHips !== "") payload.measurements.hips = Number(measHips);
+      if (measArms !== "") payload.measurements.arms = Number(measArms);
+      if (measThighs !== "") payload.measurements.thighs = Number(measThighs);
+      if (measCalves !== "") payload.measurements.calves = Number(measCalves);
+
+      await createMeasurementMutation.mutateAsync({ clientId: id, data: payload });
+      notifications.show({
+        title: "Medición guardada",
+        message: "Las medidas del cliente se han registrado correctamente.",
+        color: "teal",
+      });
+      closeMeasurementModal();
+    } catch (err: any) {
+      notifications.show({
+        title: "Error al guardar medición",
+        message: err?.response?.data?.detail || "No se pudo guardar la medición.",
+        color: "red",
+      });
+    }
+  };
+
+  const handleDeleteMeasurement = async (measurementId: string) => {
+    if (!id || !window.confirm("¿Seguro que deseas eliminar esta medición?")) return;
+    try {
+      await deleteMeasurementMutation.mutateAsync({ clientId: id, measurementId });
+      notifications.show({
+        title: "Medición eliminada",
+        message: "El registro ha sido eliminado.",
+        color: "blue",
+      });
+    } catch (err: any) {
+      notifications.show({
+        title: "Error al eliminar",
+        message: err?.response?.data?.detail || "No se pudo eliminar la medición.",
+        color: "red",
+      });
+    }
+  };
   
   // Templates are only needed when the trainer opens the "Asignar programa" /
   // "Asignar plan" modals. Defer these 1.5 s queries until then.
@@ -4444,16 +4528,25 @@ export function ClientDetailPage() {
 
             {/* Tabla de medidas */}
             <Box className="nv-card" p="xl">
-              <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Evolución de Medidas ({measurements.length} registros)
-              </Text>
+              <Group justify="space-between" mb="lg">
+                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Evolución de Medidas ({measurements.length} registros)
+                </Text>
+                <Button
+                  size="xs"
+                  leftSection={<IconPlus size={14} />}
+                  onClick={handleOpenAddMeasurement}
+                >
+                  Registrar Medida
+                </Button>
+              </Group>
               {measurements.length === 0 ? (
                 <Text c="dimmed" ta="center" py="xl">
                   {t("clientDetail.elClienteNoHaRegistrado")}
                 </Text>
               ) : (
                 <ScrollArea type="auto">
-                  <Table verticalSpacing="md" style={{ minWidth: 600 }}>
+                  <Table verticalSpacing="md" style={{ minWidth: 700 }}>
                     <Table.Thead>
                       <Table.Tr>
                         <Table.Th>{t("clientDetail.fecha")}</Table.Th>
@@ -4461,7 +4554,9 @@ export function ClientDetailPage() {
                         <Table.Th>{t("clientDetail.grasa")}</Table.Th>
                         <Table.Th>{t("clientDetail.masaMuscularKg")}</Table.Th>
                         <Table.Th>{t("clientDetail.medidas")}</Table.Th>
+                        <Table.Th>Notas</Table.Th>
                         <Table.Th>{t("clientDetail.variacion")}</Table.Th>
+                        <Table.Th style={{ width: 60 }}></Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -4493,14 +4588,35 @@ export function ClientDetailPage() {
                               <Text size="sm">{m.muscle_mass != null && m.muscle_mass > 0 ? `${m.muscle_mass} kg` : "-"}</Text>
                             </Table.Td>
                             <Table.Td>
-                              {m.measurements && Object.keys(m.measurements).length > 0 ? (
-                                <Group gap={4}>
-                                  {m.measurements.chest && <Badge size="xs" variant="light">P: {m.measurements.chest}</Badge>}
-                                  {m.measurements.waist && <Badge size="xs" variant="light">C: {m.measurements.waist}</Badge>}
-                                  {m.measurements.hips && <Badge size="xs" variant="light">Ca: {m.measurements.hips}</Badge>}
-                                </Group>
+                              {(() => {
+                                const meas = (m.measurements || {}) as Record<string, any>;
+                                const hasAny = Object.keys(meas).length > 0;
+                                if (!hasAny) return <Text size="sm" c="dimmed">-</Text>;
+                                return (
+                                  <Group gap={4} wrap="wrap">
+                                    {meas.chest && <Badge size="xs" variant="light" title="Pecho">P: {meas.chest} cm</Badge>}
+                                    {meas.waist && <Badge size="xs" variant="light" title="Cintura">C: {meas.waist} cm</Badge>}
+                                    {meas.hips && <Badge size="xs" variant="light" title="Cadera">Ca: {meas.hips} cm</Badge>}
+                                    {(meas.arms || meas.arm) && (
+                                      <Badge size="xs" variant="light" color="cyan" title="Brazos">B: {meas.arms || meas.arm} cm</Badge>
+                                    )}
+                                    {(meas.thighs || meas.thigh) && (
+                                      <Badge size="xs" variant="light" color="indigo" title="Muslos">M: {meas.thighs || meas.thigh} cm</Badge>
+                                    )}
+                                    {(meas.calves || meas.calf) && (
+                                      <Badge size="xs" variant="light" color="teal" title="Gemelos">G: {meas.calves || meas.calf} cm</Badge>
+                                    )}
+                                  </Group>
+                                );
+                              })()}
+                            </Table.Td>
+                            <Table.Td>
+                              {m.notes ? (
+                                <Text size="xs" c="dimmed" lineClamp={2} title={m.notes} style={{ maxWidth: 200 }}>
+                                  {m.notes}
+                                </Text>
                               ) : (
-                                <Text size="sm" c="dimmed">-</Text>
+                                <Text size="xs" c="dimmed">-</Text>
                               )}
                             </Table.Td>
                             <Table.Td>
@@ -4534,6 +4650,19 @@ export function ClientDetailPage() {
                                     </Badge>
                                   )}
                                 </Stack>
+                              )}
+                            </Table.Td>
+                            <Table.Td>
+                              {m.id && (
+                                <ActionIcon
+                                  size="sm"
+                                  variant="subtle"
+                                  color="red"
+                                  title="Eliminar registro"
+                                  onClick={() => handleDeleteMeasurement(m.id)}
+                                >
+                                  <IconTrash size={14} />
+                                </ActionIcon>
                               )}
                             </Table.Td>
                           </Table.Tr>
@@ -6309,6 +6438,132 @@ export function ClientDetailPage() {
           onSave={handleSaveNutritionCalculation}
           isSaving={updateClient.isPending}
         />
+      </Modal>
+
+      {/* Modal: Registrar Medición del Cliente por el Entrenador */}
+      <Modal
+        opened={measurementModalOpened}
+        onClose={closeMeasurementModal}
+        size="lg"
+        radius="lg"
+        title={
+          <Group gap={8}>
+            <IconScale size={18} color="var(--mantine-color-brand-6)" />
+            <Text fw={700}>Registrar Medidas del Cliente</Text>
+          </Group>
+        }
+        centered
+      >
+        <Stack gap="md">
+          <TextInput
+            label="Fecha de la medición"
+            type="date"
+            value={measDate}
+            onChange={(e) => setMeasDate(e.target.value)}
+            required
+          />
+
+          <SimpleGrid cols={3}>
+            <NumberInput
+              label="Peso corporal (kg)"
+              placeholder="Ej: 75.5"
+              decimalScale={2}
+              min={0}
+              value={measWeight}
+              onChange={(val) => setMeasWeight(typeof val === "number" ? val : "")}
+            />
+            <NumberInput
+              label="% Grasa corporal"
+              placeholder="Ej: 15.2"
+              decimalScale={1}
+              min={0}
+              max={100}
+              value={measBodyFat}
+              onChange={(val) => setMeasBodyFat(typeof val === "number" ? val : "")}
+            />
+            <NumberInput
+              label="Masa muscular (kg)"
+              placeholder="Ej: 32.0"
+              decimalScale={2}
+              min={0}
+              value={measMuscleMass}
+              onChange={(val) => setMeasMuscleMass(typeof val === "number" ? val : "")}
+            />
+          </SimpleGrid>
+
+          <Divider label="Perímetros corporales (cm)" labelPosition="center" />
+
+          <SimpleGrid cols={3}>
+            <NumberInput
+              label="Pecho (cm)"
+              placeholder="Ej: 102"
+              decimalScale={1}
+              min={0}
+              value={measChest}
+              onChange={(val) => setMeasChest(typeof val === "number" ? val : "")}
+            />
+            <NumberInput
+              label="Cintura (cm)"
+              placeholder="Ej: 84"
+              decimalScale={1}
+              min={0}
+              value={measWaist}
+              onChange={(val) => setMeasWaist(typeof val === "number" ? val : "")}
+            />
+            <NumberInput
+              label="Cadera (cm)"
+              placeholder="Ej: 98"
+              decimalScale={1}
+              min={0}
+              value={measHips}
+              onChange={(val) => setMeasHips(typeof val === "number" ? val : "")}
+            />
+            <NumberInput
+              label="Brazos (cm)"
+              placeholder="Ej: 36"
+              decimalScale={1}
+              min={0}
+              value={measArms}
+              onChange={(val) => setMeasArms(typeof val === "number" ? val : "")}
+            />
+            <NumberInput
+              label="Muslos (cm)"
+              placeholder="Ej: 58"
+              decimalScale={1}
+              min={0}
+              value={measThighs}
+              onChange={(val) => setMeasThighs(typeof val === "number" ? val : "")}
+            />
+            <NumberInput
+              label="Gemelos (cm)"
+              placeholder="Ej: 38"
+              decimalScale={1}
+              min={0}
+              value={measCalves}
+              onChange={(val) => setMeasCalves(typeof val === "number" ? val : "")}
+            />
+          </SimpleGrid>
+
+          <Textarea
+            label="Notas / Observaciones del entrenador o cliente"
+            placeholder="Sensaciones, progreso, feedback recibido por WhatsApp o presencial..."
+            minRows={2}
+            value={measNotes}
+            onChange={(e) => setMeasNotes(e.target.value)}
+          />
+
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={closeMeasurementModal}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveMeasurement}
+              loading={createMeasurementMutation.isPending}
+            >
+              Guardar Medición
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
 
       {/* Modal para ampliar foto de progreso */}

@@ -328,6 +328,24 @@ export const clientsApi = {
   // Progress & Measurements (staff access)
   getMeasurements: (clientId: string, limit?: number) =>
     api.get(`/clients/${clientId}/measurements`, { params: { limit } }),
+  createMeasurement: (clientId: string, data: {
+    measured_at?: string;
+    weight_kg?: number | null;
+    body_fat_percentage?: number | null;
+    muscle_mass_kg?: number | null;
+    measurements?: Record<string, any>;
+    notes?: string | null;
+  }) => api.post(`/clients/${clientId}/measurements`, data),
+  updateMeasurement: (clientId: string, measurementId: string, data: {
+    measured_at?: string;
+    weight_kg?: number | null;
+    body_fat_percentage?: number | null;
+    muscle_mass_kg?: number | null;
+    measurements?: Record<string, any>;
+    notes?: string | null;
+  }) => api.put(`/clients/${clientId}/measurements/${measurementId}`, data),
+  deleteMeasurement: (clientId: string, measurementId: string) =>
+    api.delete(`/clients/${clientId}/measurements/${measurementId}`),
   getPhotos: (clientId: string, limit?: number) =>
     api.get(`/clients/${clientId}/photos`, { params: { limit } }),
   getProgressSummary: (clientId: string) =>
