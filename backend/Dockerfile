@@ -58,6 +58,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /install /usr/local
 COPY . .
 
+RUN mkdir -p /app/.gunicorn && chown -R app:app /app/.gunicorn
+
 USER app
 
 EXPOSE 8000

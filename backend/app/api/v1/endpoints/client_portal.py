@@ -8,15 +8,17 @@ import logging
 import re as _re
 import secrets
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional, Union
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel, field_validator
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
+
+from app.services.audit import log_audit
 
 from app.core.database import get_db
 from app.core.parallel_db import parallel_queries
@@ -2343,6 +2345,7 @@ async def get_measurements(
 @router.post("/progress/measurements", response_model=MeasurementResponse, status_code=status.HTTP_201_CREATED)
 async def create_measurement(
     data: MeasurementCreate,
+    request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -2357,9 +2360,15 @@ async def create_measurement(
             try:
                 measured_at_dt = datetime.strptime(data.measured_at, "%Y-%m-%d")
             except ValueError:
-                measured_at_dt = datetime.now()
+                measured_at_dt = datetime.utcnow()
+    else:
+        measured_at_dt = datetime.utcnow()
 
-    day_start = measured_at_dt.replace(hour=0, minute=0, second=0, microsecond=0) if measured_at_dt else datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # Normalizar a datetime naive en UTC para comparaciones consistentes en PostgreSQL
+    if measured_at_dt.tzinfo is not None:
+        measured_at_dt = measured_at_dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+    day_start = measured_at_dt.replace(hour=0, minute=0, second=0, microsecond=0)
     day_end = day_start.replace(hour=23, minute=59, second=59, microsecond=999999)
     existing_result = await db.execute(
         select(ClientMeasurement)
@@ -2368,16 +2377,64 @@ async def create_measurement(
             ClientMeasurement.measured_at >= day_start,
             ClientMeasurement.measured_at <= day_end,
         )
+        .order_by(ClientMeasurement.measured_at.desc())
         .limit(1)
     )
     existing = existing_result.scalar_one_or_none()
 
+    # Si no hay medición hoy pero hay una creada en las últimas 36 horas que solo tiene fotos
+    # y ninguna medida registrada, unificamos en esa misma medición de revisión
+    if not existing:
+        window_start = measured_at_dt - timedelta(hours=36)
+        window_end = measured_at_dt + timedelta(hours=36)
+        near_photo_result = await db.execute(
+            select(ClientMeasurement)
+            .where(
+                ClientMeasurement.client_id == client.id,
+                ClientMeasurement.measured_at >= window_start,
+                ClientMeasurement.measured_at <= window_end,
+                ClientMeasurement.photos.isnot(None),
+                ClientMeasurement.weight_kg.is_(None),
+            )
+            .order_by(ClientMeasurement.measured_at.desc())
+            .limit(1)
+        )
+        near_photo_measurement = near_photo_result.scalar_one_or_none()
+        if near_photo_measurement and not near_photo_measurement.measurements:
+            existing = near_photo_measurement
+
+    action = "update" if existing else "create"
+    old_values = None
     if existing:
-        existing.weight_kg = data.weight_kg
-        existing.body_fat_percentage = data.body_fat_percentage
-        existing.muscle_mass_kg = data.muscle_mass_kg
-        existing.measurements = data.measurements or {}
-        existing.notes = data.notes
+        old_values = {
+            "weight_kg": float(existing.weight_kg) if existing.weight_kg is not None else None,
+            "body_fat_percentage": float(existing.body_fat_percentage) if existing.body_fat_percentage is not None else None,
+            "muscle_mass_kg": float(existing.muscle_mass_kg) if existing.muscle_mass_kg is not None else None,
+            "measurements": dict(existing.measurements or {}),
+            "notes": existing.notes,
+            "measured_at": existing.measured_at.isoformat() if existing.measured_at else None,
+            "photos_count": len(existing.photos or []),
+        }
+
+        if data.weight_kg is not None:
+            existing.weight_kg = data.weight_kg
+        if data.body_fat_percentage is not None:
+            existing.body_fat_percentage = data.body_fat_percentage
+        if data.muscle_mass_kg is not None:
+            existing.muscle_mass_kg = data.muscle_mass_kg
+
+        # Merge de medidas no destructivo (preservar medidas anteriores si no se pasan en data)
+        if data.measurements is not None:
+            merged_measurements = dict(existing.measurements or {})
+            for k, v in data.measurements.items():
+                if v is not None:
+                    merged_measurements[k] = v
+            existing.measurements = merged_measurements
+            flag_modified(existing, "measurements")
+
+        if data.notes is not None:
+            existing.notes = data.notes
+
         existing.measured_at = measured_at_dt
         measurement = existing
     else:
@@ -2388,7 +2445,8 @@ async def create_measurement(
             body_fat_percentage=data.body_fat_percentage,
             muscle_mass_kg=data.muscle_mass_kg,
             measurements=data.measurements or {},
-            notes=data.notes
+            notes=data.notes,
+            photos=[]
         )
         db.add(measurement)
 
@@ -2398,6 +2456,30 @@ async def create_measurement(
     if data.weight_kg:
         client.weight_kg = str(data.weight_kg)
         await db.commit()
+
+    # Registro de auditoría
+    new_values = {
+        "weight_kg": float(measurement.weight_kg) if measurement.weight_kg is not None else None,
+        "body_fat_percentage": float(measurement.body_fat_percentage) if measurement.body_fat_percentage is not None else None,
+        "muscle_mass_kg": float(measurement.muscle_mass_kg) if measurement.muscle_mass_kg is not None else None,
+        "measurements": dict(measurement.measurements or {}),
+        "notes": measurement.notes,
+        "measured_at": measurement.measured_at.isoformat() if measurement.measured_at else None,
+    }
+
+    await log_audit(
+        db,
+        workspace_id=client.workspace_id,
+        user_id=current_user.id,
+        action=action,
+        table_name="client_measurements",
+        record_id=measurement.id,
+        old_values=old_values,
+        new_values=new_values,
+        request=request,
+        extra_data={"client_id": str(client.id), "source": "client_portal_measurement"},
+    )
+    await db.commit()
 
     await _close_pending_reviews(
         db,
@@ -2411,6 +2493,7 @@ async def create_measurement(
 
 @router.post("/progress/photos")
 async def upload_progress_photo(
+    request: Request,
     file: UploadFile = File(...),
     photo_type: str = Query("front", description="Type: front, back, side"),
     notes: Optional[str] = None,
@@ -2440,8 +2523,6 @@ async def upload_progress_photo(
             detail=f"Tipo de archivo {file.content_type} no permitido. Usa JPEG, PNG, WebP o HEIC."
         )
     
-
-
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El archivo supera el límite de 10 MB")
@@ -2484,20 +2565,61 @@ async def upload_progress_photo(
         )
         measurement = db_result.scalar_one_or_none()
 
+        # Si no existe medición exacta en target_date, buscar si en +/- 24h hay una medición
+        # que no tenga fotos para adjuntarla allí y evitar registros huérfanos
+        if not measurement:
+            window_start = datetime.combine(target_date, datetime.min.time()) - timedelta(hours=24)
+            window_end = datetime.combine(target_date, datetime.max.time()) + timedelta(hours=24)
+            near_result = await db.execute(
+                select(ClientMeasurement)
+                .where(
+                    and_(
+                        ClientMeasurement.client_id == client.id,
+                        ClientMeasurement.measured_at >= window_start,
+                        ClientMeasurement.measured_at <= window_end,
+                    )
+                )
+                .order_by(ClientMeasurement.measured_at.desc())
+                .limit(1)
+            )
+            candidate = near_result.scalar_one_or_none()
+            if candidate and (not candidate.photos or len(candidate.photos) == 0):
+                measurement = candidate
+
+        action = "update" if measurement else "create"
         if measurement:
             current_photos = list(measurement.photos or [])
             current_photos.append(photo_data)
             measurement.photos = current_photos
-        
             flag_modified(measurement, "photos")
         else:
             measurement = ClientMeasurement(
                 client_id=client.id,
-                measured_at=datetime.now(),
-                photos=[photo_data]
+                measured_at=datetime.combine(target_date, datetime.now().time()),
+                photos=[photo_data],
+                measurements={},
             )
             db.add(measurement)
 
+        await db.commit()
+        await db.refresh(measurement)
+
+        await log_audit(
+            db,
+            workspace_id=client.workspace_id,
+            user_id=current_user.id,
+            action=f"upload_photo_{action}",
+            table_name="client_measurements",
+            record_id=measurement.id,
+            new_values={
+                "photo_type": photo_type,
+                "filename": filename,
+                "target_date": str(target_date),
+                "url": public_url,
+            },
+            request=request,
+            extra_data={"client_id": str(client.id), "source": "client_portal_photo"},
+        )
         await db.commit()
 
         await _close_pending_reviews(
@@ -2582,12 +2704,12 @@ async def get_progress_photos(
 
 @router.delete("/progress/photos")
 async def delete_progress_photo(
+    request: Request,
     photo_url: str = Query(..., description="Reference URL of the photo to delete"),
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a specific progress photo by its stored reference URL."""
-
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -2599,6 +2721,7 @@ async def delete_progress_photo(
     measurements = result.scalars().all()
 
     found = False
+    affected_measurement = None
     for m in measurements:
         if not m.photos:
             continue
@@ -2606,6 +2729,7 @@ async def delete_progress_photo(
         m.photos = [p for p in m.photos if p.get("url") != photo_url]
         if len(m.photos) < original_len:
             found = True
+            affected_measurement = m
             flag_modified(m, "photos")
             break
 
@@ -2613,6 +2737,20 @@ async def delete_progress_photo(
         raise HTTPException(status_code=404, detail="Foto no encontrada")
 
     await db.commit()
+
+    if affected_measurement:
+        await log_audit(
+            db,
+            workspace_id=client.workspace_id,
+            user_id=current_user.id,
+            action="delete_photo",
+            table_name="client_measurements",
+            record_id=affected_measurement.id,
+            old_values={"deleted_photo_url": photo_url},
+            request=request,
+            extra_data={"client_id": str(client.id), "source": "client_portal_photo"},
+        )
+        await db.commit()
 
 
     key = workspace_key_from_url(photo_url)

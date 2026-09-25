@@ -20,16 +20,24 @@ from app.middleware.permissions import PermissionsMiddleware
 
 import sys
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    stream=sys.stdout,
-    force=True,
-)
-logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
-logging.getLogger("alembic.runtime.plugins").setLevel(logging.WARNING)
+def setup_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        stream=sys.stdout,
+        force=True,
+    )
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger("app").setLevel(logging.INFO)
+    logging.getLogger("api.access").setLevel(logging.INFO)
+    logging.getLogger("uvicorn").setLevel(logging.INFO)
+    logging.getLogger("uvicorn.error").setLevel(logging.INFO)
+    logging.getLogger("uvicorn.access").setLevel(logging.INFO)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("alembic.runtime.plugins").setLevel(logging.WARNING)
+
+setup_logging()
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +131,8 @@ async def lifespan(app: FastAPI):
     should_run_migrations = os.getenv("RUN_MIGRATIONS_ON_STARTUP", "true").lower() in ("1", "true", "yes")
     if should_run_migrations:
         _run_alembic_upgrade()
+        # Restore application logging in case Alembic modified log levels or handlers
+        setup_logging()
     else:
         logger.info("RUN_MIGRATIONS_ON_STARTUP=false -> skipping migrations on boot")
 

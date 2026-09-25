@@ -42,7 +42,7 @@ import {
   IconTrash,
   IconUpload,
 } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { openDangerConfirm } from "../../utils/confirmModal";
 import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos, useDeleteProgressPhoto, usePendingReviews } from "../../hooks/useClientPortal";
 import { formatDecimal } from "../../utils/format";
@@ -134,6 +134,16 @@ function MeasurementRow({
 }
 
 // Modal para registrar medidas
+const formatLocalDate = (d: Date | string): string => {
+  if (typeof d === "string") {
+    return d.split("T")[0];
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 function LogMeasurementModal({
   opened,
   onClose,
@@ -183,16 +193,41 @@ function LogMeasurementModal({
     },
   });
 
-  const dateStr = measurementDate.toISOString().split("T")[0];
+  const dateStr = formatLocalDate(measurementDate);
   const existingForDate = useMemo(() => {
-    return existingMeasurements?.find((m) => m.measured_at?.startsWith(dateStr));
+    return existingMeasurements?.find((m) => (m.measured_at || "").split("T")[0] === dateStr);
   }, [existingMeasurements, dateStr]);
 
-  const handleDateChange = (d: string | null) => {
+  useEffect(() => {
+    if (opened) {
+      const today = new Date();
+      setMeasurementDate(today);
+      const todayStr = formatLocalDate(today);
+      const existing = existingMeasurements?.find((m) => (m.measured_at || "").split("T")[0] === todayStr);
+      if (existing) {
+        form.setValues({
+          weight_kg: existing.weight_kg ?? undefined,
+          body_fat_percentage: existing.body_fat_percentage ?? undefined,
+          muscle_mass_kg: existing.muscle_mass_kg ?? undefined,
+          chest: existing.measurements?.chest ?? undefined,
+          waist: existing.measurements?.waist ?? undefined,
+          hips: existing.measurements?.hips ?? undefined,
+          arms: existing.measurements?.arms ?? undefined,
+          thighs: existing.measurements?.thighs ?? undefined,
+          notes: existing.notes ?? "",
+        });
+      } else {
+        form.reset();
+      }
+    }
+  }, [opened, existingMeasurements]);
+
+  const handleDateChange = (d: Date | string | null) => {
     if (!d) return;
-    const dateObj = new Date(d);
+    const dateObj = typeof d === "string" ? new Date(d) : d;
     setMeasurementDate(dateObj);
-    const existing = existingMeasurements?.find((m) => m.measured_at?.startsWith(dateObj.toISOString().split("T")[0]));
+    const dStr = formatLocalDate(dateObj);
+    const existing = existingMeasurements?.find((m) => (m.measured_at || "").split("T")[0] === dStr);
     if (existing) {
       form.setValues({
         weight_kg: existing.weight_kg ?? undefined,
@@ -219,7 +254,7 @@ function LogMeasurementModal({
     if (form.values.thighs) measurements.thighs = form.values.thighs;
 
     onSubmit({
-      measured_at: measurementDate.toISOString(),
+      measured_at: `${formatLocalDate(measurementDate)}T12:00:00`,
       weight_kg: form.values.weight_kg,
       body_fat_percentage: form.values.body_fat_percentage,
       muscle_mass_kg: form.values.muscle_mass_kg,
@@ -563,9 +598,18 @@ export function MyProgressPage() {
     );
   }
 
+  // Filter measurements that have actual physical data so empty photo records don't distort comparison
+  const measurementsWithData = useMemo(() => {
+    return measurements?.filter(m => 
+      m.weight_kg != null || 
+      (m.measurements && Object.values(m.measurements as Record<string, number | undefined>).some(v => v != null && v > 0)) ||
+      m.body_fat_percentage != null
+    ) || [];
+  }, [measurements]);
+
   // Get last two measurements for comparison
-  const lastMeasurement = measurements?.[0];
-  const comparisonMeasurement = measurements?.[selectedComparison] || measurements?.[1];
+  const lastMeasurement = measurementsWithData[0] || measurements?.[0];
+  const comparisonMeasurement = measurementsWithData[selectedComparison] || measurementsWithData[1] || measurements?.[1];
 
   // Use only API data - no mocks
   const data = {
@@ -1016,12 +1060,12 @@ export function MyProgressPage() {
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group justify="space-between" mb="lg">
               <Text fw={600}>{t("myProgress.medidasCorporales")}</Text>
-              {measurements && measurements.length > 1 && (
+              {measurementsWithData && measurementsWithData.length > 1 && (
                 <Select
                   size="xs"
                   w={200}
                   label={t("myProgress.compararCon")}
-                  data={measurements.slice(1).map((m, i) => ({
+                  data={measurementsWithData.slice(1).map((m, i) => ({
                     value: String(i + 1),
                     label: m.measured_at 
                       ? new Date(m.measured_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -1261,7 +1305,19 @@ export function MyProgressPage() {
                     const photoDate = dateStr.split("T")[0];
                     const matchingMeasurement = measurements?.find((m: any) => {
                       const mDate = (m.measured_at || m.created_at || "").split("T")[0];
+                      const hasData = m.weight_kg != null || (m.measurements && Object.keys(m.measurements).length > 0);
+                      return mDate === photoDate && hasData;
+                    }) || measurements?.find((m: any) => {
+                      const mDate = (m.measured_at || m.created_at || "").split("T")[0];
                       return mDate === photoDate;
+                    }) || measurements?.find((m: any) => {
+                      const mDate = (m.measured_at || m.created_at || "").split("T")[0];
+                      if (!mDate || !photoDate) return false;
+                      const dPhoto = new Date(photoDate).getTime();
+                      const dM = new Date(mDate).getTime();
+                      const diffDays = Math.abs((dPhoto - dM) / (1000 * 60 * 60 * 24));
+                      const hasData = m.weight_kg != null || (m.measurements && Object.keys(m.measurements).length > 0);
+                      return diffDays <= 2 && hasData;
                     });
                     return (
                       <Paper key={idx} p="md" radius="md" withBorder>
