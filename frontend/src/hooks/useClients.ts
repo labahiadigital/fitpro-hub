@@ -301,8 +301,10 @@ interface ClientMeasurement {
   created_at: string;
 }
 
-interface ClientPhoto {
+export interface ClientPhoto {
   url: string;
+  ref_url?: string;
+  filename?: string;
   type: string;
   notes?: string;
   uploaded_at: string;
@@ -363,6 +365,19 @@ export function useClientPhotos(
     staleTime: 8 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: true,
+  });
+}
+
+export function useDeleteClientPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clientId, photoUrl }: { clientId: string; photoUrl: string }) =>
+      clientsApi.deletePhoto(clientId, photoUrl),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["client-photos", variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ["client-measurements", variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ["client-progress-summary", variables.clientId] });
+    },
   });
 }
 

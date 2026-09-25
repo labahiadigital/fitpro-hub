@@ -219,6 +219,7 @@ interface Measurement {
     hips?: number;
     arms?: number;
     thighs?: number;
+    calves?: number;
   };
   photos: Array<{ url: string; type: string }>;
   notes?: string;
@@ -865,6 +866,7 @@ export function useCreateMeasurement() {
         hips?: number;
         arms?: number;
         thighs?: number;
+        calves?: number;
       };
       notes?: string;
     }) => {

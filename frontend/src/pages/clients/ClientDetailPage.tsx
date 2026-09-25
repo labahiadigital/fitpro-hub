@@ -82,7 +82,7 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
-import { useClient, useUpdateClient, useDeleteClient, useClientMeasurements, useClientPhotos, useClientProgressSummary, useClientWorkoutLogs, useClientNutritionLogs, useCreateClientMeasurement, useDeleteClientMeasurement } from "../../hooks/useClients";
+import { useClient, useUpdateClient, useDeleteClient, useClientMeasurements, useClientPhotos, useDeleteClientPhoto, useClientProgressSummary, useClientWorkoutLogs, useClientNutritionLogs, useCreateClientMeasurement, useDeleteClientMeasurement } from "../../hooks/useClients";
 import { useTasksList, useDeleteTask, type Task as TaskType } from "../../hooks/useTasks";
 import { useTeamMembers } from "../../hooks/useTeam";
 import { 
@@ -985,6 +985,8 @@ export function ClientDetailPage() {
   });
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
+  const deletePhotoMutation = useDeleteClientPhoto();
+  const [selectedPhotoViewer, setSelectedPhotoViewer] = useState<{ url: string; type: string; date?: string; notes?: string; ref_url?: string } | null>(null);
   
   // Modal de alergias e intolerancias
   const [allergyModalOpened, { open: openAllergyModal, close: closeAllergyModal }] = useDisclosure(false);
@@ -4767,7 +4769,22 @@ export function ClientDetailPage() {
               ) : (
                 <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md">
                   {clientPhotos.map((photo, index) => (
-                    <Card key={index} padding="xs" radius="md" withBorder>
+                    <Card
+                      key={index}
+                      padding="xs"
+                      radius="md"
+                      withBorder
+                      style={{ cursor: "pointer", position: "relative" }}
+                      onClick={() =>
+                        setSelectedPhotoViewer({
+                          url: photo.url,
+                          type: photo.type,
+                          date: photo.measurement_date || photo.uploaded_at,
+                          notes: photo.notes,
+                          ref_url: photo.ref_url || photo.url,
+                        })
+                      }
+                    >
                       <Card.Section>
                         <Image
                           src={photo.url}
@@ -4776,20 +4793,40 @@ export function ClientDetailPage() {
                           fallbackSrc="https://placehold.co/200x180?text=Foto"
                         />
                       </Card.Section>
-                      <Stack gap={2} mt="xs">
-                        <Badge size="xs" variant="light" color="blue">
-                          {photo.type === "front" ? "Frontal" : 
-                           photo.type === "back" ? "Espalda" : 
-                           photo.type === "side" ? "Lateral" : photo.type}
-                        </Badge>
-                        <Text size="xs" c="dimmed">
-                          {photo.measurement_date 
-                            ? new Date(photo.measurement_date).toLocaleDateString("es-ES")
-                            : photo.uploaded_at 
-                              ? new Date(photo.uploaded_at).toLocaleDateString("es-ES")
-                              : t("clientDetailPage.sinFecha")}
-                        </Text>
-                      </Stack>
+                      <Group justify="space-between" align="center" mt="xs">
+                        <Stack gap={2}>
+                          <Badge size="xs" variant="light" color="blue">
+                            {photo.type === "front" ? "Frontal" : 
+                             photo.type === "back" ? "Espalda" : 
+                             photo.type === "side" ? "Lateral" : photo.type}
+                          </Badge>
+                          <Text size="xs" c="dimmed">
+                            {photo.measurement_date 
+                              ? new Date(photo.measurement_date).toLocaleDateString("es-ES")
+                              : photo.uploaded_at 
+                                ? new Date(photo.uploaded_at).toLocaleDateString("es-ES")
+                                : t("clientDetailPage.sinFecha")}
+                          </Text>
+                        </Stack>
+                        <ActionIcon
+                          size="sm"
+                          color="red"
+                          variant="subtle"
+                          title="Eliminar foto"
+                          loading={deletePhotoMutation.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm("¿Estás seguro de que deseas eliminar esta foto de progreso?")) {
+                              deletePhotoMutation.mutate({
+                                clientId: id!,
+                                photoUrl: photo.ref_url || photo.url,
+                              });
+                            }
+                          }}
+                        >
+                          <IconTrash size={14} />
+                        </ActionIcon>
+                      </Group>
                     </Card>
                   ))}
                 </SimpleGrid>
@@ -4797,6 +4834,34 @@ export function ClientDetailPage() {
             </Box>
           </Stack>
         </Tabs.Panel>
+
+        {/* Modal Visualizador de Foto */}
+        <Modal
+          opened={!!selectedPhotoViewer}
+          onClose={() => setSelectedPhotoViewer(null)}
+          title={selectedPhotoViewer ? `Foto de progreso (${selectedPhotoViewer.type === "front" ? "Frontal" : selectedPhotoViewer.type === "back" ? "Espalda" : selectedPhotoViewer.type === "side" ? "Lateral" : selectedPhotoViewer.type})` : ""}
+          size="lg"
+          centered
+        >
+          {selectedPhotoViewer && (
+            <Stack align="center" gap="sm">
+              <Image
+                src={selectedPhotoViewer.url}
+                radius="md"
+                mah={600}
+                fit="contain"
+              />
+              {selectedPhotoViewer.date && (
+                <Text size="sm" c="dimmed">
+                  Fecha: {new Date(selectedPhotoViewer.date).toLocaleDateString("es-ES")}
+                </Text>
+              )}
+              {selectedPhotoViewer.notes && (
+                <Text size="sm" ta="center">{selectedPhotoViewer.notes}</Text>
+              )}
+            </Stack>
+          )}
+        </Modal>
 
         {/* Programas */}
         <Tabs.Panel value="programs">

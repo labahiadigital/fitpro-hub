@@ -348,6 +348,8 @@ export const clientsApi = {
     api.delete(`/clients/${clientId}/measurements/${measurementId}`),
   getPhotos: (clientId: string, limit?: number) =>
     api.get(`/clients/${clientId}/photos`, { params: { limit } }),
+  deletePhoto: (clientId: string, photoUrl: string) =>
+    api.delete(`/clients/${clientId}/photos`, { params: { photo_url: photoUrl } }),
   getProgressSummary: (clientId: string) =>
     api.get(`/clients/${clientId}/progress-summary`),
   // Invitations

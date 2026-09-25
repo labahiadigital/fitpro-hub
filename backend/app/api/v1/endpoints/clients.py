@@ -125,6 +125,8 @@ class ClientMeasurementUpdateStaff(BaseModel):
 
 class ClientPhotoResponse(BaseModel):
     url: str
+    ref_url: Optional[str] = None
+    filename: Optional[str] = None
     type: str
     notes: Optional[str] = None
     uploaded_at: str
@@ -1287,6 +1289,8 @@ async def get_client_photos(
         output.append(
             ClientPhotoResponse(
                 url=presigned,
+                ref_url=raw_url,
+                filename=photo.get("filename") or raw_url.split("?")[0].split("/")[-1],
                 type=photo.get("type", "unknown"),
                 notes=photo.get("notes"),
                 uploaded_at=photo.get("uploaded_at", ""),
@@ -1294,6 +1298,71 @@ async def get_client_photos(
             )
         )
     return output
+
+
+@router.delete("/{client_id}/photos", status_code=status.HTTP_200_OK)
+async def delete_client_photo_by_staff(
+    client_id: UUID,
+    photo_url: str = Query(..., description="Reference URL or filename of the photo to delete"),
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a client photo by staff."""
+    client = await db.get(Client, client_id)
+    if not client or client.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    result = await db.execute(
+        select(ClientMeasurement)
+        .where(ClientMeasurement.client_id == client_id)
+        .where(ClientMeasurement.photos.isnot(None))
+    )
+    measurements = result.scalars().all()
+
+    found = False
+    affected_measurement = None
+    target_clean = photo_url.split("?")[0].strip()
+    target_filename = target_clean.split("/")[-1].strip()
+
+    for m in measurements:
+        if not m.photos:
+            continue
+        original_len = len(m.photos)
+
+        def _matches(p):
+            p_url = (p.get("url") or "").strip()
+            p_clean = p_url.split("?")[0].strip()
+            p_filename = (p.get("filename") or p_clean.split("/")[-1]).strip()
+            if p_url == photo_url or p_clean == target_clean:
+                return True
+            if target_filename and p_filename == target_filename:
+                return True
+            return False
+
+        m.photos = [p for p in m.photos if not _matches(p)]
+        if len(m.photos) < original_len:
+            found = True
+            affected_measurement = m
+            flag_modified(m, "photos")
+            break
+
+    if not found:
+        raise HTTPException(status_code=404, detail="Foto no encontrada")
+
+    await db.commit()
+
+    if affected_measurement:
+        await log_audit(
+            db,
+            workspace_id=client.workspace_id,
+            user_id=current_user.id,
+            action="delete_photo",
+            table_name="client_measurements",
+            record_id=affected_measurement.id,
+            new_values={"remaining_photos_count": len(affected_measurement.photos or [])}
+        )
+
+    return {"message": "Foto eliminada correctamente"}
 
 
 @router.get("/{client_id}/progress-summary")

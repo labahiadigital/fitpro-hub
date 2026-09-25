@@ -65,34 +65,40 @@ function StatProgress({
   unit: string;
   inverse?: boolean;
 }) {
-  const progress = target !== start 
+  const hasTarget = target != null && target > 0;
+  const hasStart = start != null && start > 0;
+  const hasCurrent = current != null && current > 0;
+
+  const progress = hasTarget && hasStart && target !== start 
     ? (inverse 
         ? ((start - current) / (start - target)) * 100
         : ((current - start) / (target - start)) * 100)
     : 0;
-  const change = current - start;
+  const change = hasStart && hasCurrent ? current - start : 0;
   const isPositive = inverse ? change < 0 : change > 0;
 
   return (
     <Card shadow="sm" padding="lg" radius="lg" withBorder>
       <Group justify="space-between" mb="xs">
         <Text size="sm" c="dimmed">{label}</Text>
-        {change !== 0 && (
+        {hasStart && hasCurrent && change !== 0 && (
           <Badge 
             color={isPositive ? "green" : "red"} 
             variant="light"
-            leftSection={isPositive ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />}
+            leftSection={change > 0 ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />}
           >
             {change > 0 ? "+" : ""}{formatDecimal(change, 1)}{unit}
           </Badge>
         )}
       </Group>
-      <Text size="xl" fw={700}>{current}{unit}</Text>
+      <Text size="xl" fw={700}>{hasCurrent ? `${current}${unit}` : "—"}</Text>
       <Group justify="space-between" mt="xs" mb={4}>
-        <Text size="xs" c="dimmed">Inicio: {start}{unit}</Text>
-        <Text size="xs" c="dimmed">Objetivo: {target || "?"}{unit}</Text>
+        <Text size="xs" c="dimmed">Inicio: {hasStart ? `${start}${unit}` : "—"}</Text>
+        <Text size="xs" c="dimmed">Objetivo: {hasTarget ? `${target}${unit}` : "—"}</Text>
       </Group>
-      <Progress value={Math.max(0, Math.min(100, progress))} size="sm" radius="xl" color="yellow" />
+      {hasTarget && hasStart && (
+        <Progress value={Math.max(0, Math.min(100, isNaN(progress) ? 0 : progress))} size="sm" radius="xl" color="yellow" />
+      )}
     </Card>
   );
 }
@@ -164,6 +170,7 @@ function LogMeasurementModal({
       hips?: number;
       arms?: number;
       thighs?: number;
+      calves?: number;
     };
     notes?: string;
   }) => void;
@@ -189,6 +196,7 @@ function LogMeasurementModal({
       hips: undefined as number | undefined,
       arms: undefined as number | undefined,
       thighs: undefined as number | undefined,
+      calves: undefined as number | undefined,
       notes: "",
     },
   });
@@ -214,6 +222,7 @@ function LogMeasurementModal({
           hips: existing.measurements?.hips ?? undefined,
           arms: existing.measurements?.arms ?? undefined,
           thighs: existing.measurements?.thighs ?? undefined,
+          calves: existing.measurements?.calves ?? undefined,
           notes: existing.notes ?? "",
         });
       } else {
@@ -238,6 +247,7 @@ function LogMeasurementModal({
         hips: existing.measurements?.hips ?? undefined,
         arms: existing.measurements?.arms ?? undefined,
         thighs: existing.measurements?.thighs ?? undefined,
+        calves: existing.measurements?.calves ?? undefined,
         notes: existing.notes ?? "",
       });
     } else {
@@ -252,6 +262,7 @@ function LogMeasurementModal({
     if (form.values.hips) measurements.hips = form.values.hips;
     if (form.values.arms) measurements.arms = form.values.arms;
     if (form.values.thighs) measurements.thighs = form.values.thighs;
+    if (form.values.calves) measurements.calves = form.values.calves;
 
     onSubmit({
       measured_at: `${formatLocalDate(measurementDate)}T12:00:00`,
@@ -361,6 +372,7 @@ function LogMeasurementModal({
           <NumberInput label={t("myProgress.cadera")} placeholder="98" {...form.getInputProps("hips")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
           <NumberInput label={t("myProgress.brazos")} placeholder="36" {...form.getInputProps("arms")} min={15} max={60} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
           <NumberInput label={t("myProgress.muslos")} placeholder="58" {...form.getInputProps("thighs")} min={30} max={100} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={t("myProgress.gemelos", "Gemelos")} placeholder="38" {...form.getInputProps("calves")} min={20} max={80} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
         </SimpleGrid>
 
         <Textarea
@@ -390,7 +402,17 @@ function LogMeasurementModal({
           color="yellow"
           onClick={handleSubmit}
           loading={isLoading}
-          disabled={!form.values.weight_kg && !form.values.body_fat_percentage && !form.values.muscle_mass_kg}
+          disabled={
+            !form.values.weight_kg &&
+            !form.values.body_fat_percentage &&
+            !form.values.muscle_mass_kg &&
+            !form.values.chest &&
+            !form.values.waist &&
+            !form.values.hips &&
+            !form.values.arms &&
+            !form.values.thighs &&
+            !form.values.calves
+          }
           fullWidth
           size="lg"
           radius="xl"
@@ -649,13 +671,19 @@ export function MyProgressPage() {
         current: lastMeasurement?.measurements?.thighs || 0, 
         previous: comparisonMeasurement?.measurements?.thighs || 0 
       },
+      calves: {
+        current: lastMeasurement?.measurements?.calves || 0,
+        previous: comparisonMeasurement?.measurements?.calves || 0
+      },
     },
-    weightHistory: measurements?.map(m => ({
-      date: m.measured_at ? new Date(m.measured_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '',
-      weight: m.weight_kg || 0,
-      body_fat: m.body_fat_percentage || 0,
-      muscle_mass: m.muscle_mass_kg || 0,
-    })).reverse() || [],
+    weightHistory: measurements
+      ?.filter(m => m.weight_kg != null && m.weight_kg > 0)
+      .map(m => ({
+        date: m.measured_at ? new Date(m.measured_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '',
+        weight: m.weight_kg || 0,
+        body_fat: m.body_fat_percentage || 0,
+        muscle_mass: m.muscle_mass_kg || 0,
+      })).reverse() || [],
   };
 
   const handleLogMeasurement = async (measurementData: {
@@ -669,6 +697,7 @@ export function MyProgressPage() {
       hips?: number;
       arms?: number;
       thighs?: number;
+      calves?: number;
     };
     notes?: string;
   }) => {
@@ -1099,6 +1128,9 @@ export function MyProgressPage() {
                     <MeasurementRow label={t("myProgress.cadera")} {...data.measurements.hips} />
                     <MeasurementRow label={t("myProgress.brazos")} {...data.measurements.arms} />
                     <MeasurementRow label={t("myProgress.muslos")} {...data.measurements.thighs} />
+                    {(data.measurements.calves?.current > 0 || data.measurements.calves?.previous > 0) && (
+                      <MeasurementRow label={t("myProgress.gemelos", "Gemelos")} {...data.measurements.calves} />
+                    )}
                   </Table.Tbody>
                 </Table>
                 </ScrollArea>

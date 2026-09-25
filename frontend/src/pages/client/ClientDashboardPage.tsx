@@ -30,6 +30,7 @@ import {
   IconSalad,
   IconTarget,
   IconTrendingUp,
+  IconTrendingDown,
   IconClock,
   IconForms,
   IconPlayerPlay,
@@ -439,19 +440,22 @@ export function ClientDashboardPage() {
                 <Text fw={600} size="lg">{t("clientDashboard.miProgreso")}</Text>
                 <Text size="sm" c="dimmed">{data.goals.primary}</Text>
               </Box>
-              {data.goals.current_weight > 0 && data.goals.start_weight > 0 && (
-                <Badge
-                  color={data.goals.current_weight - data.goals.start_weight === 0 ? "gray" : "green"}
-                  variant="light"
-                  size="lg"
-                >
-                  <Group gap={4}>
-                    <IconTrendingUp size={14} />
-                    {data.goals.current_weight - data.goals.start_weight > 0 ? "+" : ""}
-                    {formatDecimal(data.goals.current_weight - data.goals.start_weight, 1)}kg
-                  </Group>
-                </Badge>
-              )}
+              {data.goals.current_weight > 0 && data.goals.start_weight > 0 && (() => {
+                const diff = data.goals.current_weight - data.goals.start_weight;
+                if (Math.abs(diff) < 0.05) return null;
+                const isLossGoal = data.goals.target_weight > 0 && data.goals.target_weight < data.goals.start_weight;
+                const isGainGoal = data.goals.target_weight > 0 && data.goals.target_weight > data.goals.start_weight;
+                const isPositive = isLossGoal ? diff < 0 : isGainGoal ? diff > 0 : true;
+                const color = (isLossGoal || isGainGoal) ? (isPositive ? "green" : "red") : "yellow";
+                return (
+                  <Badge color={color} variant="light" size="lg">
+                    <Group gap={4}>
+                      {diff > 0 ? <IconTrendingUp size={14} /> : <IconTrendingDown size={14} />}
+                      {diff > 0 ? "+" : ""}{formatDecimal(diff, 1)}kg
+                    </Group>
+                  </Badge>
+                );
+              })()}
             </Group>
 
             {data.goals.current_weight > 0 ? (

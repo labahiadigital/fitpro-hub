@@ -629,7 +629,7 @@ async def get_client_dashboard(
     meal_plan_q = (
         select(MealPlan)
         .where(MealPlan.client_id == client_id)
-        .order_by(desc(MealPlan.created_at))
+        .order_by(desc(MealPlan.is_active), desc(MealPlan.created_at))
         .limit(1)
     )
     # Latest measurement with weight (for current weight on the dashboard)
@@ -1402,11 +1402,23 @@ async def create_detailed_workout_log(
             WorkoutLog.created_at <= day_end
         )
     )
-    if existing_log_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Ya has registrado este entrenamiento en esa fecha"
-        )
+    existing_log = existing_log_result.scalar_one_or_none()
+    if existing_log:
+        existing_log_data = dict(existing_log.log or {})
+        existing_log_data.update({
+            "date": target_date.isoformat(),
+            "day_index": data.day_index,
+            "exercises": [ex.model_dump() for ex in data.exercises],
+            "duration_minutes": data.duration_minutes or existing_log_data.get("duration_minutes"),
+            "perceived_effort": data.perceived_effort or existing_log_data.get("perceived_effort"),
+            "satisfaction_rating": data.satisfaction_rating or existing_log_data.get("satisfaction_rating"),
+            "notes": data.notes or existing_log_data.get("notes"),
+        })
+        existing_log.log = existing_log_data
+        flag_modified(existing_log, "log")
+        await db.commit()
+        await db.refresh(existing_log)
+        return {"message": "Entrenamiento actualizado correctamente", "id": str(existing_log.id)}
 
     log_created_at = target_date.replace(hour=12, minute=0, second=0, microsecond=0)
     log = WorkoutLog(
@@ -1838,7 +1850,7 @@ async def log_nutrition(
     result = await db.execute(
         select(MealPlan)
         .where(MealPlan.client_id == client.id)
-        .order_by(desc(MealPlan.created_at))
+        .order_by(desc(MealPlan.is_active), desc(MealPlan.created_at))
         .limit(1)
     )
     meal_plan = result.scalar_one_or_none()
@@ -2166,7 +2178,7 @@ async def delete_nutrition_log(
     result = await db.execute(
         select(MealPlan)
         .where(MealPlan.client_id == client.id)
-        .order_by(desc(MealPlan.created_at))
+        .order_by(desc(MealPlan.is_active), desc(MealPlan.created_at))
         .limit(1)
     )
     meal_plan = result.scalar_one_or_none()
@@ -2177,7 +2189,7 @@ async def delete_nutrition_log(
             detail="No se encontró el registro"
         )
     
-    logs = meal_plan.adherence.get("logs", [])
+    logs = list(meal_plan.adherence.get("logs", []))
     
     if log_index < 0 or log_index >= len(logs):
         raise HTTPException(
@@ -2185,9 +2197,10 @@ async def delete_nutrition_log(
             detail="Registro no encontrado"
         )
     
-
     logs.pop(log_index)
-    meal_plan.adherence = {"logs": logs}
+    current_adherence = dict(meal_plan.adherence or {})
+    current_adherence["logs"] = logs
+    meal_plan.adherence = current_adherence
     flag_modified(meal_plan, "adherence")
     await db.commit()
 
@@ -2722,11 +2735,25 @@ async def delete_progress_photo(
 
     found = False
     affected_measurement = None
+    target_clean = photo_url.split("?")[0].strip()
+    target_filename = target_clean.split("/")[-1].strip()
+
     for m in measurements:
         if not m.photos:
             continue
         original_len = len(m.photos)
-        m.photos = [p for p in m.photos if p.get("url") != photo_url]
+
+        def _matches(p):
+            p_url = (p.get("url") or "").strip()
+            p_clean = p_url.split("?")[0].strip()
+            p_filename = (p.get("filename") or p_clean.split("/")[-1]).strip()
+            if p_url == photo_url or p_clean == target_clean:
+                return True
+            if target_filename and p_filename == target_filename:
+                return True
+            return False
+
+        m.photos = [p for p in m.photos if not _matches(p)]
         if len(m.photos) < original_len:
             found = True
             affected_measurement = m
@@ -3013,7 +3040,10 @@ async def create_client_booking(
     default_duration = booking_policies.get("default_duration", 60)
 
     try:
-        start_time = datetime.fromisoformat(data.start_time)
+        raw_start = data.start_time.replace("Z", "+00:00")
+        start_time = datetime.fromisoformat(raw_start)
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
     except ValueError:
         raise HTTPException(status_code=400, detail="Formato de hora inválido")
 
@@ -3145,7 +3175,10 @@ async def update_client_booking(
         raise HTTPException(status_code=400, detail="No se puede modificar una sesión finalizada o cancelada")
 
     try:
-        new_start = datetime.fromisoformat(data.start_time)
+        raw_start = data.start_time.replace("Z", "+00:00")
+        new_start = datetime.fromisoformat(raw_start)
+        if new_start.tzinfo is None:
+            new_start = new_start.replace(tzinfo=timezone.utc)
     except ValueError:
         raise HTTPException(status_code=400, detail="Formato de hora inválido")
 
